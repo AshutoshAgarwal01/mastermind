@@ -25,7 +25,11 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        run: npm ci
+        # npm ci trusts the committed lockfile strictly, but this repo's lockfile was
+        # generated on Windows and npm has a bug (npm/cli#4828) where platform-specific
+        # optional deps (e.g. Vite's rolldown native binding) can go missing across OSes.
+        # npm install re-resolves optional deps for the runner's actual platform.
+        run: npm install
 
       - name: Build (packages/shared -> apps/web -> apps/server)
         run: npm run build

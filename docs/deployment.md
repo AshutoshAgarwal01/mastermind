@@ -3,9 +3,9 @@
 > Recommended deployment approach, following the intended shape described in
 > [tech-stack.md](./tech-stack.md) §7. See that doc for the fuller reasoning.
 
-**Progress:** Steps 1, 3, 4, 5 done (resources created, WebSockets + Always On
-enabled, env vars confirmed, server now serves the built frontend). Steps 6, 7
-still pending.
+**Progress:** Steps 1, 3, 4, 5, 6 done (resources created, WebSockets + Always
+On enabled, env vars confirmed, server now serves the built frontend, OIDC +
+GitHub Actions wired up). Step 7 (monitoring & cost) still pending.
 
 ## Current Azure resources
 
@@ -111,7 +111,7 @@ az webapp create -g rg-mastermind -p plan-mastermind -n mastermind --runtime "NO
   the split-hosting alternative below, where the frontend and API live on
   different domains.
 
-### 6. Deploy (GitHub Actions + OIDC) — ⏳ Not started
+### 6. Deploy (GitHub Actions + OIDC) — ✅ Done
 
 A starter workflow already exists at
 [.github/workflows/deploy.yml](../.github/workflows/deploy.yml). It builds,

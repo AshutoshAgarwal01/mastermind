@@ -188,6 +188,13 @@ finish wiring it up:
    >    `--clean true --restart true`, which force-wipes `wwwroot` before
    >    extracting so only the current job's artifact is ever present. This
    >    needs an additional repo variable: `AZURE_RESOURCE_GROUP` = `rg-mastermind`.
+   > 4. The clean deploy then took a long time stuck on "Starting the
+   >    site...". Cause: the zip shipped the *entire* `node_modules`,
+   >    including devDependencies (`typescript`, `vite`, `tsx`, `eslint`,
+   >    `playwright`) only needed for the build/lint/test steps above, never
+   >    at runtime — badly bloating transfer/extraction/cold-start time.
+   >    Fixed by adding `npm prune --omit=dev` right before zipping, right
+   >    after all the build/lint/E2E steps that still need those packages.
 7. **Set the Startup Command** (Portal → Configuration → General settings, or
    `az webapp config set -g rg-mastermind -n mastermind --startup-file
    "node apps/server/dist/index.js"`).

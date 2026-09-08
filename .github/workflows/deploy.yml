@@ -73,6 +73,12 @@ jobs:
       #
       # The App Service's Startup Command must be set to:
       #   node apps/server/dist/index.js
+      - name: Prune devDependencies for a leaner deploy package
+        # typescript/vite/tsx/eslint/playwright etc. are only needed for the
+        # build/lint/test steps above, not at runtime — pruning them cuts the
+        # zip size (and container cold-start time) drastically.
+        run: npm prune --omit=dev
+
       - name: Zip artifact
         run: zip -qr deploy.zip . -x '.git/*'
 

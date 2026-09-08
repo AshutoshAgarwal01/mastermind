@@ -146,28 +146,33 @@ no long-lived credential is stored in GitHub. To finish wiring it up:
    `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID` (all from the
    app registration / `az account show`).
 5. **Add a repo variable** `AZURE_WEBAPP_NAME` set to `mastermind`.
-6. **Enable Oryx build-on-deploy** so Azure runs `npm install && npm run
-   build` server-side against the whole workspace (avoids hand-packaging the
-   npm-workspaces symlinked `node_modules`):
+6. **Disable Oryx build-on-deploy** — the CI job already runs `npm install`
+   + `npm run build` and ships the fully-built artifact as-is:
    ```powershell
    az webapp config appsettings set -g rg-mastermind -n mastermind \
-     --settings SCM_DO_BUILD_DURING_DEPLOYMENT=true
+     --settings SCM_DO_BUILD_DURING_DEPLOYMENT=false
    ```
-   > **Gotcha hit + fixed:** Oryx's `npm install` only installed 111 packages
-   > and the build failed with `sh: 1: tsc: not found` — modern npm (v9+
-   > removed the old `--production` flag) defaults its `omit` config to
-   > `dev` automatically whenever `NODE_ENV=production` is set (needed at
-   > runtime, see §5), skipping `devDependencies` (where `typescript`,
-   > `vite`, `tsx` live) during Oryx's build-time `npm install`.
-   > `NPM_CONFIG_PRODUCTION=false` does **not** fix this — that config key no
-   > longer exists in npm 9+ and is silently ignored. The correct override is
-   > `--include=dev`, set via:
-   > ```powershell
-   > az webapp config appsettings set -g rg-mastermind -n mastermind \
-   >   --settings NPM_CONFIG_INCLUDE=dev
-   > ```
-   > `include` takes precedence over the `NODE_ENV`-driven `omit` default,
-   > forcing dev dependencies to install regardless.
+   > **Gotchas hit along the way (superseded by the fix above):** originally
+   > tried `SCM_DO_BUILD_DURING_DEPLOYMENT=true` so Oryx would build
+   > server-side. That surfaced two dead ends before landing on the real
+   > fix:
+   > 1. Oryx's `npm install` only installed 111 packages and `sh: 1: tsc:
+   >    not found` — modern npm (v9+ removed the old `--production` flag)
+   >    defaults its `omit` config to `dev` whenever `NODE_ENV=production` is
+   >    set (needed at runtime, see §5), skipping `devDependencies`
+   >    (`typescript`, `vite`, `tsx`). `NPM_CONFIG_PRODUCTION=false` does
+   >    **not** fix this (that config key no longer exists in npm 9+);
+   >    `NPM_CONFIG_INCLUDE=dev` does, by taking precedence over the
+   >    `NODE_ENV`-driven `omit` default.
+   > 2. After fixing that, the app still crashed at runtime with
+   >    `ERR_MODULE_NOT_FOUND: Cannot find package '@mastermind/shared'`.
+   >    Oryx compresses `node_modules` into a tarball and extracts it to
+   >    `/node_modules` (outside `wwwroot`) for faster cold starts — but npm
+   >    workspaces creates `node_modules/@mastermind/shared` as a
+   >    **relative** symlink (`../../packages/shared`), which breaks once
+   >    relocated outside the repo. Disabling Oryx's build entirely (this
+   >    step) sidesteps that relocation altogether, since Azure just extracts
+   >    the already-built CI artifact without touching `node_modules`.
 7. **Set the Startup Command** (Portal → Configuration → General settings, or
    `az webapp config set -g rg-mastermind -n mastermind --startup-file
    "node apps/server/dist/index.js"`).

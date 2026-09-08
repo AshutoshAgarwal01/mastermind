@@ -53,11 +53,15 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      # Ships the whole repo; Azure (Oryx) runs `npm install && npm run build`
-      # again server-side because SCM_DO_BUILD_DURING_DEPLOYMENT=true must be
-      # set on the App Service (see docs/deployment.md). This keeps the CI
-      # build above as a fast fail-fast check (lint + E2E) without having to
-      # hand-package the npm-workspaces monorepo's symlinked node_modules.
+      # Ships the whole repo exactly as built in this job. The App Service
+      # must have SCM_DO_BUILD_DURING_DEPLOYMENT=false so Azure/Oryx does NOT
+      # rebuild/recompress node_modules on its side: Oryx's node_modules
+      # tar.gz compression relocates node_modules to /node_modules (outside
+      # wwwroot), which breaks npm workspaces' relative symlink for
+      # @mastermind/shared (../../packages/shared resolves to a path that no
+      # longer exists once relocated). Shipping the already-built artifact
+      # as-is keeps the workspace symlinks intact relative to their original
+      # (untouched) directory layout. See docs/deployment.md.
       #
       # The App Service's Startup Command must be set to:
       #   node apps/server/dist/index.js

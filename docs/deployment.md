@@ -154,15 +154,20 @@ no long-lived credential is stored in GitHub. To finish wiring it up:
      --settings SCM_DO_BUILD_DURING_DEPLOYMENT=true
    ```
    > **Gotcha hit + fixed:** Oryx's `npm install` only installed 111 packages
-   > and the build failed with `sh: 1: tsc: not found` — Oryx detects the
-   > `NODE_ENV=production` App Setting (needed at runtime, see §5) and
-   > automatically skips `devDependencies` (where `typescript`, `vite`, `tsx`
-   > live) during its own build-time `npm install`. Fixed by also setting:
+   > and the build failed with `sh: 1: tsc: not found` — modern npm (v9+
+   > removed the old `--production` flag) defaults its `omit` config to
+   > `dev` automatically whenever `NODE_ENV=production` is set (needed at
+   > runtime, see §5), skipping `devDependencies` (where `typescript`,
+   > `vite`, `tsx` live) during Oryx's build-time `npm install`.
+   > `NPM_CONFIG_PRODUCTION=false` does **not** fix this — that config key no
+   > longer exists in npm 9+ and is silently ignored. The correct override is
+   > `--include=dev`, set via:
    > ```powershell
    > az webapp config appsettings set -g rg-mastermind -n mastermind \
-   >   --settings NPM_CONFIG_PRODUCTION=false
+   >   --settings NPM_CONFIG_INCLUDE=dev
    > ```
-   > which tells Oryx/npm to install dev dependencies regardless of `NODE_ENV`.
+   > `include` takes precedence over the `NODE_ENV`-driven `omit` default,
+   > forcing dev dependencies to install regardless.
 7. **Set the Startup Command** (Portal → Configuration → General settings, or
    `az webapp config set -g rg-mastermind -n mastermind --startup-file
    "node apps/server/dist/index.js"`).

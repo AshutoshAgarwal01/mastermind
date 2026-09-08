@@ -151,6 +151,17 @@ no long-lived credential is stored in GitHub. To finish wiring it up:
 This still depends on step 1 above (server serving `apps/web/dist`) being
 implemented before a deploy will actually serve a working app.
 
+**CI gotcha hit + fixed:** the CI build step failed with
+`Cannot find native binding ... @rolldown/binding-linux-x64-gnu` — a known npm
+bug ([npm/cli#4828](https://github.com/npm/cli/issues/4828)) where a
+lockfile committed on Windows can be missing another OS's platform-specific
+optional dependency (here, Vite's Rolldown bundler native binding). `npm ci`
+and even a plain `npm install` both still trust the existing lockfile's
+resolution and hit the same error. Fixed by deleting `package-lock.json`
+before `npm install` in the workflow, forcing a full fresh resolve against
+the runner's actual platform (safe in CI since every run starts from a clean
+checkout anyway).
+
 ### 7. Monitoring & cost — ⏳ Not started
 
 - Enable Application Insights for logs/traces.

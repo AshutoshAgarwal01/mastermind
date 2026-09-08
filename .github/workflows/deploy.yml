@@ -1,5 +1,8 @@
-name: Deploy to Azure App Service
+name: Build and Deploy to Azure App Service
 
+# CI (build/lint/E2E) runs automatically on every push to main.
+# Deploying to Azure only happens when this workflow is triggered manually
+# (Actions tab -> this workflow -> "Run workflow"), never on a plain push.
 on:
   push:
     branches: [main]
@@ -12,7 +15,7 @@ permissions:
   contents: read
 
 jobs:
-  build-and-deploy:
+  build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -46,13 +49,6 @@ jobs:
       - name: Run E2E tests
         run: npm run test:e2e
 
-      - name: Azure login (OIDC)
-        uses: azure/login@v2
-        with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-
       # Ships the whole repo exactly as built in this job. The App Service
       # must have SCM_DO_BUILD_DURING_DEPLOYMENT=false so Azure/Oryx does NOT
       # rebuild/recompress node_modules on its side: Oryx's node_modules
@@ -62,7 +58,41 @@ jobs:
       # longer exists once relocated). Shipping the already-built artifact
       # as-is keeps the workspace symlinks intact relative to their original
       # (untouched) directory layout. See docs/deployment.md.
-      #
+      - name: Prune devDependencies for a leaner deploy package
+        # typescript/vite/tsx/eslint/playwright etc. are only needed for the
+        # steps above, not at runtime — pruning them cuts the zip size (and
+        # container cold-start time) drastically.
+        run: npm prune --omit=dev
+
+      - name: Zip artifact
+        run: zip -qr deploy.zip . -x '.git/*'
+
+      - name: Upload deploy artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: deploy-zip
+          path: deploy.zip
+          retention-days: 7
+
+  deploy:
+    needs: build
+    # Only runs when this workflow is manually triggered — a plain push to
+    # main builds/tests/lints (job above) but does NOT deploy.
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download deploy artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: deploy-zip
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
       # Uses `az webapp deploy --clean true` (not the azure/webapps-deploy
       # action) because that action's zip-deploy does NOT wipe wwwroot first —
       # a stale oryx-manifest.toml + compressed node_modules.tar.gz from an
@@ -73,15 +103,6 @@ jobs:
       #
       # The App Service's Startup Command must be set to:
       #   node apps/server/dist/index.js
-      - name: Prune devDependencies for a leaner deploy package
-        # typescript/vite/tsx/eslint/playwright etc. are only needed for the
-        # build/lint/test steps above, not at runtime — pruning them cuts the
-        # zip size (and container cold-start time) drastically.
-        run: npm prune --omit=dev
-
-      - name: Zip artifact
-        run: zip -qr deploy.zip . -x '.git/*'
-
       - name: Deploy to Azure Web App (clean)
         run: |
           az webapp deploy --resource-group ${{ vars.AZURE_RESOURCE_GROUP }} \

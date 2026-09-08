@@ -5,7 +5,10 @@
 
 **Progress:** Steps 1, 3, 4, 5, 6 done (resources created, WebSockets + Always
 On enabled, env vars confirmed, server now serves the built frontend, OIDC +
-GitHub Actions wired up). Step 7 (monitoring & cost) still pending.
+GitHub Actions wired up, `npm prune --omit=dev` added for a lean deploy). Step
+7 (monitoring & cost) still pending. **Live-site verification after the last
+fix (pruning devDependencies) has not been confirmed yet** — see §6's "Status
+as of end of last session" note for what to check first next time.
 
 ## Current Azure resources
 
@@ -114,11 +117,21 @@ az webapp create -g rg-mastermind -p plan-mastermind -n mastermind --runtime "NO
 ### 6. Deploy (GitHub Actions + OIDC) — ✅ Done
 
 A starter workflow already exists at
-[.github/workflows/deploy.yml](../.github/workflows/deploy.yml). It builds,
-lints, and runs the E2E suite, then deploys via `az webapp deploy --clean
-true` using **OIDC (workload identity federation)** instead of a
-publish-profile secret — no long-lived credential is stored in GitHub. To
-finish wiring it up:
+[.github/workflows/deploy.yml](../.github/workflows/deploy.yml), split into
+two jobs:
+- **`build`** — runs automatically on every push to `main` (and on manual
+  dispatch): install, build, lint, E2E, prune devDependencies, zip, upload
+  as a build artifact. Never deploys anything by itself.
+- **`deploy`** — depends on `build`, but only runs when the workflow is
+  triggered manually (Actions tab → this workflow → "Run workflow"), via
+  `if: github.event_name == 'workflow_dispatch'`. Downloads the artifact
+  from the `build` job and deploys it with `az webapp deploy --clean true`
+  using **OIDC (workload identity federation)** instead of a publish-profile
+  secret — no long-lived credential is stored in GitHub.
+
+This means every push to `main` gets fast CI feedback (build/lint/E2E), but
+nothing reaches Azure until you explicitly run the workflow. To finish wiring
+it up:
 
 1. **Create an Azure AD app registration** and a service principal for it:
    ```powershell
@@ -199,8 +212,19 @@ finish wiring it up:
    `az webapp config set -g rg-mastermind -n mastermind --startup-file
    "node apps/server/dist/index.js"`).
 
-This still depends on step 1 above (server serving `apps/web/dist`) being
-implemented before a deploy will actually serve a working app.
+**Status as of end of last session:** all 7 items above are done. The
+workflow was then split into separate `build` (automatic on push) and
+`deploy` (manual-only) jobs — see §6 above — so a deploy no longer happens
+automatically. **Not yet confirmed:** whether a deploy with the
+`npm prune --omit=dev` fix applied actually loads successfully end-to-end —
+the last *observed* deploy attempt (before the prune fix and before the
+build/deploy split) was stuck on "Starting the site..." for 2+ minutes.
+**First thing to check next session:** manually trigger the workflow
+(Actions tab → "Build and Deploy to Azure App Service" → "Run workflow"),
+then open
+`https://mastermind-hggefxb9athnfyfz.westus3-01.azurewebsites.net/`. If it
+still fails, re-run `az webapp log tail -g rg-mastermind -n mastermind` per
+the troubleshooting steps embedded in the gotchas above.
 
 **CI gotcha hit + fixed:** the CI build step failed with
 `Cannot find native binding ... @rolldown/binding-linux-x64-gnu` — a known npm

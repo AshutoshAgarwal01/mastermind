@@ -151,9 +151,19 @@ auto-advance also covers the transition into the new `setting-code` phase.
 - No unit tests exist yet (Vitest/RTL planned, not set up). E2E coverage exists (see §3.1) but
   only for two happy-path flows — no regression coverage for kick/disconnect/reconnect, role-vote
   tie-breaking, timeout carry-over, or the Impossible/6-8-peg variants yet.
-- No production build/deploy wiring for the server (no Dockerfile, no Azure App Service config
-  yet) — dev-only via `tsx watch` so far. See [deployment.md](./deployment.md) for the recommended
-  approach when this work starts.
+- Azure App Service deployment is now wired up (resources created, server serves the built
+  frontend, GitHub Actions + OIDC pipeline in `.github/workflows/deploy.yml`) — see
+  [deployment.md](./deployment.md) for full status and the list of CI/runtime gotchas hit and
+  fixed along the way. The workflow is split into a `build` job (runs automatically on every push
+  to `main`: install/build/lint/E2E/prune/zip, never deploys) and a `deploy` job (only runs on
+  manual `workflow_dispatch`, downloads the build artifact and runs `az webapp deploy --clean
+  true`). **Live-site verification after the latest fix (pruning devDependencies) is still
+  pending** (last observed deploy attempt, before that fix and before this build/deploy split, was
+  stuck on "Starting the site..."): next session, manually trigger the workflow and confirm
+  `https://mastermind-hggefxb9athnfyfz.westus3-01.azurewebsites.net/` actually loads before
+  assuming it's done. Step 7 (Application Insights + spending alert) not started yet.
+- No Dockerfile / containerized deployment path — the current approach is a plain Node App
+  Service (Oryx build disabled, CI ships a pre-built + pruned artifact instead).
 
 ### 3.1 End-to-end tests (Playwright)
 

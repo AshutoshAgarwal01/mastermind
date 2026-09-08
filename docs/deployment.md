@@ -133,6 +133,15 @@ no long-lived credential is stored in GitHub. To finish wiring it up:
    Portal → App registration → Certificates & secrets → Federated credentials,
    or `az ad app federated-credential create`), subject:
    `repo:<org>/<repo>:ref:refs/heads/main`.
+   > **Gotcha hit + fixed:** GitHub now includes immutable owner/repo IDs in
+   > the OIDC subject claim (security hardening), so the actual subject sent
+   > is `repo:<org>@<org-id>/<repo>@<repo-id>:ref:refs/heads/main`, not the
+   > plain-name format above — Azure AD requires an exact string match, so
+   > using the plain-name subject fails with `AADSTS700213`. Get the real
+   > subject from a failed Actions run's "Azure login (OIDC)" step log (it's
+   > printed under "Federated token details"), and use that literal string.
+   > For this repo it was:
+   > `repo:AshutoshAgarwal01@17690014/mastermind@1360735620:ref:refs/heads/main`.
 4. **Add repo secrets** (Settings → Secrets and variables → Actions):
    `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID` (all from the
    app registration / `az account show`).

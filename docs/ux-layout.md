@@ -1,4 +1,4 @@
-# Mastermind Online — Layout & UX
+# Mastermind — Layout & UX
 
 > **Status:** Draft, work in progress. Covers visual style, accessibility, and
 > screen-by-screen layout for the responsive web app. See companion doc
@@ -75,16 +75,42 @@ flowchart TD
 
 ## 4. Main Game Screen
 
-Layout differs by role, but shares a persistent header: **round counter**
-(e.g. "Round 3 / 10") and a **round timer** (countdown ring/bar). When the
-timer hits zero, the current guess auto-locks: if the player hadn't pressed
-Submit, their previous round's guess is reused automatically (per rules), and
-any in-progress unsubmitted edits are discarded.
+Layout differs by role, but shares a persistent header: a compact **round
+indicator** — a small filled circular badge with the current round number
+(e.g. "3") followed by a muted "/10" — instead of a "Round 3 / 10" text
+label, to keep the header lightweight. A compact **✕ "Leave Game" icon
+button** sits at the far right of the header. Tapping it asks for
+confirmation (progress will be lost) before returning to Home.
+
+Directly below the header is a **round timer row**: a **depleting progress
+bar** (fills the row, shrinks from full to empty as the round runs out) with
+the **numeric seconds remaining** (e.g. "45s") shown next to it — the bar
+gives an at-a-glance sense of pacing, while the number gives an exact count,
+which matters most on short rounds (e.g. Impossible's 20s). The bar turns
+from the accent color to a **warning/red color** once time is low (roughly
+the final quarter of the round). Once the bar enters this low/red zone, the
+numeric counter switches from whole seconds (e.g. "5s") to **hundredths of a
+second** (e.g. "4.73s"), ticking down smoothly to add urgency/excitement in
+the final stretch of the round; outside the low zone it shows plain whole
+seconds. When the timer hits zero, the current guess auto-locks: if the
+player hadn't pressed Submit, their previous round's guess is reused
+automatically (per rules), and any in-progress unsubmitted edits are
+discarded.
 
 ### 4.1 Decoder view
 - **Own guess board**: large and central. Shows **full history** — every past
   round's guess as a row, stacking downward, each with its feedback (correct
   position / correct color counts), classic Mastermind style.
+- **Feedback legend**: a persistent legend below the guess board explains the
+  feedback indicators: a **green dot** = correct color & position, a
+  **yellow dot** = correct color but wrong position, and a **⏱ clock icon**
+  = "Round timed out" (the round's guess was auto-submitted/carried over
+  because the player didn't press Submit in time).
+- **Feedback circle positioning**: each row's feedback dots (and the ⏱
+  timed-out icon, when present) are **right-aligned** within that row, on the
+  same line as the row's pegs whenever there's room. All of a row's feedback
+  dots render in a **single line** (never wrapping across peg counts of 4,
+  6, or 8) so the row stays compact and easy to scan.
 - **Guess input**: tap an empty peg slot in the current row → a color palette
   popup appears → tap a color to fill the slot. Repeat for all slots, then
   tap **Submit** to lock in the guess for the round.
@@ -101,6 +127,11 @@ any in-progress unsubmitted edits are discarded.
 ## 5. Game End Screen
 
 - Reveals the **secret code**.
+- **Final guess reveal**: each Decoder's **last submitted guess** is shown
+  alongside its feedback (same row style as the guess board — pegs, feedback
+  dots, carried-over icon), so players can see how close the final attempt
+  was. In multiplayer, this is shown **for every Decoder**, not just the
+  viewer's own guess.
 - **Leaderboard/ranking** of everyone who cracked the code, ordered by
   earliest submission timestamp (1st, 2nd, 3rd, ...); if no one cracked it,
   shows the loss outcome with the Coder called out as winner.

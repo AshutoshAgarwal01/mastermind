@@ -1,4 +1,4 @@
-# Mastermind Online — Game Rules
+# Mastermind — Game Rules
 
 > **Status:** Draft, work in progress. This document covers game rules, roles,
 > flow, and platform scope. Layout/UX, tech stack details, and distribution

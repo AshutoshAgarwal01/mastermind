@@ -63,13 +63,24 @@ jobs:
       # as-is keeps the workspace symlinks intact relative to their original
       # (untouched) directory layout. See docs/deployment.md.
       #
+      # Uses `az webapp deploy --clean true` (not the azure/webapps-deploy
+      # action) because that action's zip-deploy does NOT wipe wwwroot first —
+      # a stale oryx-manifest.toml + compressed node_modules.tar.gz from an
+      # earlier SCM_DO_BUILD_DURING_DEPLOYMENT=true deploy kept getting reused
+      # by the container startup script even after switching it to false.
+      # --clean true forces wwwroot to be wiped before extracting, so only
+      # this job's freshly-built artifact is ever present.
+      #
       # The App Service's Startup Command must be set to:
       #   node apps/server/dist/index.js
-      - name: Deploy to Azure Web App
-        uses: azure/webapps-deploy@v3
-        with:
-          app-name: ${{ vars.AZURE_WEBAPP_NAME }}
-          package: .
+      - name: Zip artifact
+        run: zip -qr deploy.zip . -x '.git/*'
+
+      - name: Deploy to Azure Web App (clean)
+        run: |
+          az webapp deploy --resource-group ${{ vars.AZURE_RESOURCE_GROUP }} \
+            --name ${{ vars.AZURE_WEBAPP_NAME }} \
+            --src-path deploy.zip --type zip --clean true --restart true
 
       - name: Azure logout
         if: always()

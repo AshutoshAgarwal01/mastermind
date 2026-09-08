@@ -115,9 +115,10 @@ az webapp create -g rg-mastermind -p plan-mastermind -n mastermind --runtime "NO
 
 A starter workflow already exists at
 [.github/workflows/deploy.yml](../.github/workflows/deploy.yml). It builds,
-lints, and runs the E2E suite, then deploys via `azure/webapps-deploy` using
-**OIDC (workload identity federation)** instead of a publish-profile secret —
-no long-lived credential is stored in GitHub. To finish wiring it up:
+lints, and runs the E2E suite, then deploys via `az webapp deploy --clean
+true` using **OIDC (workload identity federation)** instead of a
+publish-profile secret — no long-lived credential is stored in GitHub. To
+finish wiring it up:
 
 1. **Create an Azure AD app registration** and a service principal for it:
    ```powershell
@@ -145,7 +146,8 @@ no long-lived credential is stored in GitHub. To finish wiring it up:
 4. **Add repo secrets** (Settings → Secrets and variables → Actions):
    `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID` (all from the
    app registration / `az account show`).
-5. **Add a repo variable** `AZURE_WEBAPP_NAME` set to `mastermind`.
+5. **Add repo variables**: `AZURE_WEBAPP_NAME` = `mastermind`,
+   `AZURE_RESOURCE_GROUP` = `rg-mastermind`.
 6. **Disable Oryx build-on-deploy** — the CI job already runs `npm install`
    + `npm run build` and ships the fully-built artifact as-is:
    ```powershell
@@ -173,6 +175,19 @@ no long-lived credential is stored in GitHub. To finish wiring it up:
    >    relocated outside the repo. Disabling Oryx's build entirely (this
    >    step) sidesteps that relocation altogether, since Azure just extracts
    >    the already-built CI artifact without touching `node_modules`.
+   > 3. Even after that, the app kept crashing with the *same*
+   >    `@mastermind/shared` error, and the container log showed the
+   >    **identical** `Build Operation ID` across deploys — proof that
+   >    `azure/webapps-deploy`'s zip-deploy does **not** wipe `wwwroot`
+   >    first, so a stale `oryx-manifest.toml` + compressed
+   >    `node_modules.tar.gz` left over from an earlier
+   >    `SCM_DO_BUILD_DURING_DEPLOYMENT=true` deploy kept being reused by the
+   >    container startup script regardless of this deploy's actual content.
+   >    Fixed by switching the workflow's deploy step from the
+   >    `azure/webapps-deploy` action to the `az webapp deploy` CLI with
+   >    `--clean true --restart true`, which force-wipes `wwwroot` before
+   >    extracting so only the current job's artifact is ever present. This
+   >    needs an additional repo variable: `AZURE_RESOURCE_GROUP` = `rg-mastermind`.
 7. **Set the Startup Command** (Portal → Configuration → General settings, or
    `az webapp config set -g rg-mastermind -n mastermind --startup-file
    "node apps/server/dist/index.js"`).

@@ -2,7 +2,9 @@
 
 > **Status:** Proposed for the initial implementation. This document describes
 > the application stack, project structure, and expected path from a local MVP
-> to a deployable multiplayer service.
+> to a deployable multiplayer service. See [deployment.md](./deployment.md) for
+> concrete, step-by-step Azure hosting instructions based on the shape
+> described in §7 below.
 
 ## 1. Frontend
 
@@ -105,6 +107,10 @@ Socket.IO Redis adapter, and multiple App Service instances. Application
 Insights can provide server logs, request tracing, and runtime monitoring.
 Azure resource spending alerts should be configured against the subscription
 credit before deployment.
+
+See [deployment.md](./deployment.md) for the concrete step-by-step guide
+(Azure CLI commands, required App Service settings, and an alternative split
+hosting approach).
 
 ## 8. Initial Dependencies
 

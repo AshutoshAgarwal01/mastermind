@@ -1,5 +1,9 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
+import fastifyStatic from '@fastify/static';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import path from 'node:path';
 import { Server } from 'socket.io';
 import type {
   ClientToServerEvents,
@@ -17,11 +21,30 @@ import { Room, RoomError } from './room.js';
 
 const PORT = Number(process.env.PORT ?? 8080);
 const HOST = process.env.HOST ?? '0.0.0.0';
+const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 
 const app = Fastify({ logger: true });
 await app.register(cors, { origin: process.env.CORS_ORIGIN ?? true });
 
 app.get('/health', async () => ({ ok: true }));
+
+if (IS_PRODUCTION) {
+  // Serves the built apps/web SPA from the same origin as the API/Socket.IO server.
+  const dirname = path.dirname(fileURLToPath(import.meta.url));
+  const webDistDir = path.join(dirname, '../../web/dist');
+  const indexHtml = readFileSync(path.join(webDistDir, 'index.html'));
+
+  await app.register(fastifyStatic, { root: webDistDir });
+
+  app.setNotFoundHandler((request, reply) => {
+    // Client-side routing fallback — never intercept Socket.IO's own transport requests.
+    if (request.method === 'GET' && !request.url.startsWith('/socket.io')) {
+      reply.type('text/html').send(indexHtml);
+    } else {
+      reply.code(404).send({ error: 'Not found' });
+    }
+  });
+}
 
 const address = await app.listen({ port: PORT, host: HOST });
 app.log.info(`Fastify listening on ${address}`);

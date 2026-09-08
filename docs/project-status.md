@@ -4,7 +4,8 @@
 > fixes, features, etc.). Update this file whenever the structure, stack, or
 > status materially changes. See [game-rules.md](./game-rules.md),
 > [ux-layout.md](./ux-layout.md), and [tech-stack.md](./tech-stack.md) for the
-> original requirements/design docs this implementation follows.
+> original requirements/design docs this implementation follows, and
+> [deployment.md](./deployment.md) for the recommended Azure hosting approach.
 
 ## 1. Repository Structure
 
@@ -151,7 +152,8 @@ auto-advance also covers the transition into the new `setting-code` phase.
   only for two happy-path flows — no regression coverage for kick/disconnect/reconnect, role-vote
   tie-breaking, timeout carry-over, or the Impossible/6-8-peg variants yet.
 - No production build/deploy wiring for the server (no Dockerfile, no Azure App Service config
-  yet) — dev-only via `tsx watch` so far.
+  yet) — dev-only via `tsx watch` so far. See [deployment.md](./deployment.md) for the recommended
+  approach when this work starts.
 
 ### 3.1 End-to-end tests (Playwright)
 

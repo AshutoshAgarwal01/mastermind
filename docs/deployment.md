@@ -153,6 +153,16 @@ no long-lived credential is stored in GitHub. To finish wiring it up:
    az webapp config appsettings set -g rg-mastermind -n mastermind \
      --settings SCM_DO_BUILD_DURING_DEPLOYMENT=true
    ```
+   > **Gotcha hit + fixed:** Oryx's `npm install` only installed 111 packages
+   > and the build failed with `sh: 1: tsc: not found` — Oryx detects the
+   > `NODE_ENV=production` App Setting (needed at runtime, see §5) and
+   > automatically skips `devDependencies` (where `typescript`, `vite`, `tsx`
+   > live) during its own build-time `npm install`. Fixed by also setting:
+   > ```powershell
+   > az webapp config appsettings set -g rg-mastermind -n mastermind \
+   >   --settings NPM_CONFIG_PRODUCTION=false
+   > ```
+   > which tells Oryx/npm to install dev dependencies regardless of `NODE_ENV`.
 7. **Set the Startup Command** (Portal → Configuration → General settings, or
    `az webapp config set -g rg-mastermind -n mastermind --startup-file
    "node apps/server/dist/index.js"`).

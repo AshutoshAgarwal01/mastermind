@@ -18,6 +18,7 @@ import type {
 } from '@mastermind/shared';
 import { RoomManager } from './rooms.js';
 import { Room, RoomError } from './room.js';
+import { trackException } from './telemetry.js';
 
 const PORT = Number(process.env.PORT ?? 8080);
 const HOST = process.env.HOST ?? '0.0.0.0';
@@ -106,7 +107,7 @@ io.on('connection', (socket) => {
       cb(res);
       broadcastRoom(room.roomCode);
     } catch (err) {
-      cb(errorResponse(err));
+      cb(errorResponse(err, { roomCode: req.roomCode }));
     }
   });
 
@@ -192,12 +193,13 @@ io.on('connection', (socket) => {
     try {
       fn(room, loc.playerId);
     } catch (err) {
-      cb(errorResponse(err));
+      cb(errorResponse(err, { roomCode: loc.roomCode, playerId: loc.playerId }));
     }
   }
 });
 
-function errorResponse(err: unknown): ErrorResponse {
+function errorResponse(err: unknown, context: Record<string, string> = {}): ErrorResponse {
   const message = err instanceof Error ? err.message : 'Unexpected error.';
+  trackException(err, context);
   return { ok: false, message };
 }

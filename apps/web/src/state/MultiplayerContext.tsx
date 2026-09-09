@@ -12,6 +12,7 @@ import type {
 import { getSocket } from './socketClient';
 import { MultiplayerContext } from './useMultiplayer';
 import type { MultiplayerActions, MultiplayerState, Theme, UiScreen } from './useMultiplayer';
+import { trackEvent, trackPageView } from './telemetry';
 
 const THEME_KEY = 'mastermind:theme';
 const COLORBLIND_KEY = 'mastermind:colorblind';
@@ -77,6 +78,12 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
     }
   }, [room?.status, room?.round, room?.settings.pegCount]);
 
+  // Report the screen the player is actually looking at (in-room status takes over from the
+  // pre-room screen state once a room exists).
+  useEffect(() => {
+    trackPageView(room?.status ? `room:${room.status}` : `pre-room:${screen}`);
+  }, [room?.status, screen]);
+
   // Give the Coder a blank draft to fill in once it's their turn to set the secret code.
   useEffect(() => {
     if (room?.status === 'setting-code') {
@@ -102,6 +109,7 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
           setRoom(res.room);
         } else {
           setJoinError(res.message);
+          trackEvent('error.client', { context: 'create_room', message: res.message });
         }
         resolve();
       });
@@ -123,6 +131,7 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
           setRoom(res.room);
         } else {
           setJoinError(res.message);
+          trackEvent('error.client', { context: 'join_room', message: res.message });
         }
         resolve();
       });

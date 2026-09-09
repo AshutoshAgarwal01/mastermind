@@ -8,6 +8,7 @@ import {
 } from '@mastermind/shared';
 import type { PlayerPublic, RoomStateView } from '@mastermind/shared';
 import { randomUUID } from 'node:crypto';
+import { trackEvent } from './telemetry.js';
 
 const ROLE_VOTE_SECONDS = 15;
 const MAX_HUMANS = 4;
@@ -38,6 +39,9 @@ export class Room {
   roleVoteDeadline: number | null = null;
   secretCode: PegColorId[] | null = null;
   winners: { playerId: string; name: string; round: number; submittedAt: number }[] = [];
+  readonly createdAt = Date.now();
+  private gameStartedAt: number | null = null;
+  private totalTimedOut = 0;
 
   private players = new Map<string, PlayerInternal>();
   private roleVotes = new Map<string, Role>();
@@ -50,6 +54,7 @@ export class Room {
     this.settings = settings;
     this.broadcast = broadcast;
     this.hostId = '';
+    trackEvent('game.created', { roomCode, difficulty: settings.difficulty, pegCount: settings.pegCount });
   }
 
   get playerList(): PlayerInternal[] {
@@ -82,6 +87,7 @@ export class Room {
     };
     if (player.isHost) this.hostId = player.id;
     this.players.set(player.id, player);
+    trackEvent('player.joined', { roomCode: this.roomCode, playerCount: this.players.size, isHost: player.isHost });
     return player;
   }
 
@@ -90,6 +96,7 @@ export class Room {
     if (!player) return null;
     player.connected = true;
     player.socketId = socketId;
+    trackEvent('player.reconnected', { roomCode: this.roomCode, playerId: player.id });
     return player;
   }
 
@@ -102,6 +109,7 @@ export class Room {
     if (player) {
       player.connected = false;
       player.socketId = null;
+      trackEvent('player.disconnected', { roomCode: this.roomCode, playerId: player.id });
     }
   }
 
@@ -109,6 +117,7 @@ export class Room {
     if (requesterId !== this.hostId) throw new RoomError('Only the host can kick players.');
     if (this.status !== 'lobby') throw new RoomError('Cannot kick players after the game has started.');
     this.players.delete(targetId);
+    trackEvent('player.kicked', { roomCode: this.roomCode, kickedPlayerId: targetId });
   }
 
   startGame(requesterId: string): void {
@@ -117,6 +126,14 @@ export class Room {
 
     const humans = this.playerList.filter((p) => !p.isBot);
     if (humans.length === 0) throw new RoomError('Need at least one player to start.');
+
+    this.gameStartedAt = Date.now();
+    trackEvent('game.started', {
+      roomCode: this.roomCode,
+      difficulty: this.settings.difficulty,
+      pegCount: this.settings.pegCount,
+      humanCount: humans.length,
+    });
 
     if (humans.length === 1) {
       // Solo: the lone human is always Decoder, bot auto-added as Coder.
@@ -260,6 +277,8 @@ export class Room {
     this.tickHandle = null;
 
     const decoders = this.playerList.filter((p) => p.role === 'decoder');
+    const timedOutCount = decoders.filter((p) => !p.submittedThisRound).length;
+    this.totalTimedOut += timedOutCount;
     for (const p of decoders) {
       if (!p.submittedThisRound) {
         this.recordSubmission(p, new Array(this.settings.pegCount).fill(null), true);
@@ -296,12 +315,24 @@ export class Room {
     this.status = 'ended';
     if (this.tickHandle) clearInterval(this.tickHandle);
     this.tickHandle = null;
+    trackEvent('game.ended', {
+      roomCode: this.roomCode,
+      difficulty: this.settings.difficulty,
+      pegCount: this.settings.pegCount,
+      playerCount: this.playerList.length,
+      roundsPlayed: this.round,
+      didWin: this.winners.length > 0,
+      winningRound: this.winners[0]?.round ?? null,
+      durationMs: Date.now() - (this.gameStartedAt ?? this.createdAt),
+      totalTimeouts: this.totalTimedOut,
+    });
     this.broadcast();
   }
 
   playAgain(requesterId: string): void {
     if (requesterId !== this.hostId) throw new RoomError('Only the host can start a new game.');
     if (this.status !== 'ended') throw new RoomError('The current game has not ended yet.');
+    trackEvent('game.restarted', { roomCode: this.roomCode });
     for (const p of Array.from(this.players.values())) {
       if (p.isBot) {
         this.players.delete(p.id);
@@ -318,6 +349,8 @@ export class Room {
     this.roleVoteDeadline = null;
     this.secretCode = null;
     this.winners = [];
+    this.gameStartedAt = null;
+    this.totalTimedOut = 0;
     this.broadcast();
   }
 

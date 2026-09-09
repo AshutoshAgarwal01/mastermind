@@ -4,8 +4,10 @@
 > fixes, features, etc.). Update this file whenever the structure, stack, or
 > status materially changes. See [game-rules.md](./game-rules.md),
 > [ux-layout.md](./ux-layout.md), and [tech-stack.md](./tech-stack.md) for the
-> original requirements/design docs this implementation follows, and
-> [deployment.md](./deployment.md) for the recommended Azure hosting approach.
+> original requirements/design docs this implementation follows,
+> [local-development.md](./local-development.md) for running this on your own
+> machine, and [deployment.md](./deployment.md) for the recommended Azure
+> hosting approach.
 
 ## 1. Repository Structure
 
@@ -90,6 +92,21 @@ root package.json          npm workspaces ("apps/*", "packages/*")
 - **Realtime contract:** `ClientToServerEvents` / `ServerToClientEvents` in
   `packages/shared/src/socket-events.ts`, imported by both sides so the socket API is fully typed
   end-to-end (no `any`).
+- **Telemetry:** Azure Application Insights custom events, fully optional/no-op unless a
+  connection string is configured (safe for local dev/CI with nothing set). Server
+  (`apps/server/src/telemetry.ts`, `applicationinsights` v2 classic API, reads
+  `APPLICATIONINSIGHTS_CONNECTION_STRING`) is the authoritative source for game/round lifecycle +
+  errors, called directly from `Room` (`game.created`, `player.joined`/`reconnected`/
+  `disconnected`/`kicked`, `game.started`, `game.ended` (with a rolled-up `totalTimeouts` count —
+  no separate per-round event, to keep volume/cost down), `game.restarted`) and from `index.ts`'s
+  central `errorResponse()` helper (`error.server`
+  exceptions via `trackException`). Client (`apps/web/src/state/telemetry.ts`,
+  `@microsoft/applicationinsights-web`, reads build-time `VITE_APPINSIGHTS_CONNECTION_STRING`)
+  tracks page views for every screen/room-status transition plus `error.client` for join/create
+  failures — wired into `MultiplayerContext.tsx`. Every event on both sides carries a common
+  `environment: development|production` property. See [deployment.md](./deployment.md) §7 for the
+  App Setting / repo secret still needed to actually enable it, and
+  [telemetry.md](./telemetry.md) for the full event list + sample Application Insights queries.
 - Icons: still just the ⚙/✕ characters; `lucide-react` has not been added.
 
 **Planned but NOT yet implemented:** Zod runtime validation of socket payloads (currently only
@@ -225,6 +242,9 @@ From the **repo root** (after `npm install` once to link the workspaces):
 - `npm run dev:web` — starts the Vite dev server (default http://localhost:5173/)
 - `npm run build` — builds `packages/shared`, then `apps/web`, then `apps/server` in order
 
+See [local-development.md](./local-development.md) for the full walkthrough (prereqs, env vars,
+running a production build locally, troubleshooting).
+
 Per-workspace equivalents also work, e.g. `npm run dev --workspace apps/server`,
 `npm run lint --workspace apps/web`.
 
@@ -243,3 +263,6 @@ Per-workspace equivalents also work, e.g. `npm run dev --workspace apps/server`,
 5. Azure App Service deployment: Dockerfile or App Service config for `apps/server`, static
    hosting or same-origin serving for the built `apps/web` bundle, WebSockets enabled.
 6. Add `lucide-react` if/when real icons are wanted (currently just ⚙/✕ characters).
+7. Permanent usage analytics (games played/completed, returning users) via a durable ledger
+   decoupled from Application Insights' retention window — design captured in
+   [analytics.md](./analytics.md), not yet implemented.

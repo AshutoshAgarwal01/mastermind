@@ -5,10 +5,14 @@
 
 **Progress:** Steps 1, 3, 4, 5, 6 done (resources created, WebSockets + Always
 On enabled, env vars confirmed, server now serves the built frontend, OIDC +
-GitHub Actions wired up, `npm prune --omit=dev` added for a lean deploy). Step
-7 (monitoring & cost) still pending. **Live-site verification after the last
-fix (pruning devDependencies) has not been confirmed yet** — see §6's "Status
-as of end of last session" note for what to check first next time.
+GitHub Actions wired up, `npm prune --omit=dev` added for a lean deploy).
+Application Insights custom-event telemetry (server + client) is code-complete
+(see §7) but the `APPLICATIONINSIGHTS_CONNECTION_STRING` App Setting and
+`APPINSIGHTS_CONNECTION_STRING` repo secret still need to be set for it to
+actually emit anything in this environment — a spending alert is still
+pending too. **Live-site verification after the last fix (pruning
+devDependencies) has not been confirmed yet** — see §6's "Status as of end of
+last session" note for what to check first next time.
 
 ## Current Azure resources
 
@@ -237,9 +241,26 @@ before `npm install` in the workflow, forcing a full fresh resolve against
 the runner's actual platform (safe in CI since every run starts from a clean
 checkout anyway).
 
-### 7. Monitoring & cost — ⏳ Not started
+### 7. Monitoring & cost — 🔄 Partially done
 
-- Enable Application Insights for logs/traces.
+- **Telemetry code is wired up** (custom events only, no auto-collected
+  request/dependency/perf telemetry): `apps/server/src/telemetry.ts` (Node
+  `applicationinsights` SDK, no-ops unless
+  `APPLICATIONINSIGHTS_CONNECTION_STRING` is set) and
+  `apps/web/src/state/telemetry.ts` (`@microsoft/applicationinsights-web`,
+  no-ops unless `VITE_APPINSIGHTS_CONNECTION_STRING` was set at build time).
+  See [telemetry.md](./telemetry.md) for the full event list + sample
+  Application Insights (Kusto) queries.
+- **Still needed to actually enable it:**
+  - Add an App Setting on the `mastermind` App Service:
+    ```powershell
+    az webapp config appsettings set -g rg-mastermind -n mastermind --settings APPLICATIONINSIGHTS_CONNECTION_STRING="<connection string>"
+    ```
+  - Add a GitHub repo secret `APPINSIGHTS_CONNECTION_STRING` (same connection
+    string) — the build job passes it to Vite as
+    `VITE_APPINSIGHTS_CONNECTION_STRING` so it's baked into the client bundle
+    (client connection strings aren't secret by design, same trust model as a
+    GA tracking ID; this just avoids hardcoding it in source).
 - Set a spending alert on the subscription before deploying (Basic B1 tier is
   cheap but not free).
 

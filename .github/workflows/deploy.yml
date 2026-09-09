@@ -38,6 +38,12 @@ jobs:
           npm install
 
       - name: Build (packages/shared -> apps/web -> apps/server)
+        # Client Application Insights connection strings are not secret (same trust
+        # model as a GA tracking ID) — Vite bakes VITE_ vars into the client bundle at
+        # build time, so this is the only place to set it. Falls back to unset/no-op
+        # telemetry on the client if the repo secret isn't configured.
+        env:
+          VITE_APPINSIGHTS_CONNECTION_STRING: ${{ secrets.APPINSIGHTS_CONNECTION_STRING }}
         run: npm run build
 
       - name: Lint

@@ -281,6 +281,96 @@ legend {
   margin: 4px 0;
 }
 
+.how-to-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  text-align: left;
+}
+
+.how-to-step {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.how-to-step__icon {
+  font-size: 24px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.how-to-step h3 {
+  margin: 0 0 4px;
+  font-size: 15px;
+}
+
+.how-to-step p {
+  margin: 0;
+  font-size: 14px;
+  opacity: 0.85;
+}
+
+.peg-swatch-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  justify-content: center;
+}
+
+.peg-swatch {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 56px;
+  font-size: 12px;
+}
+
+.peg-swatch .peg-slot {
+  width: 40px;
+  height: 40px;
+}
+
+.example-guess {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.example-guess .guess-row__pegs {
+  width: 160px;
+}
+
+.tips-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  text-align: left;
+  font-size: 14px;
+}
+
+.tips-list li {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
 .inline-message {
   color: var(--danger);
 }

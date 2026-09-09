@@ -49,6 +49,16 @@ apps/
                             HowToPlay for the round-seconds/max-rounds definitions, and peg count
                             as pill buttons with a big number + small "PEGS" caption instead of
                             "N pegs" radio text)
+        HowToPlay           Enriched with a 6-step numbered "How a game works" list (emoji icon +
+                            title/body card per step, reuses .how-to-step styles), a peg-color
+                            swatch row (PegSlot small size per DIFFICULTIES/PEG_COLORS entry) for
+                            "Picking peg colors", a live example-guess mockup (4 colored PegSlots +
+                            feedback dots matching a real 2-exact/1-color-only/1-miss result,
+                            reusing GuessRow's .feedback-dot/.guess-row__* CSS) with a legend, and
+                            a "Good to know" tips list (timeout carry-over, reconnection, colorblind
+                            mode). No screenshots — the VS Code embedded browser can't reliably
+                            emulate a phone viewport (see §4 environment note), so illustration
+                            relies on colored circles/icons instead.
         Lobby               Real player list, room code, host-only Start Game + Kick
         RoleVote            NEW — shown when room.status==='role-vote' (2+ humans): TimerBar
                             countdown, Coder/Decoder vote buttons

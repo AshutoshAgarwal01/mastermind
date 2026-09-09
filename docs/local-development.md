@@ -8,9 +8,9 @@
 
 ## Prerequisites
 
-- **Node.js 20+** (LTS). This repo has been developed against Node 24.19.0 (installed via
+- **Node.js 22+** (LTS). This repo has been developed against Node 24.19.0 (installed via
   `winget install OpenJS.NodeJS.LTS --scope user` on Windows) and CI runs Node 22 — anything
-  20+ should work.
+  22+ should work.
 - **Git**.
 - No database/Redis needed — all game state is in-memory in the server process.
 

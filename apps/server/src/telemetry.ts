@@ -14,7 +14,7 @@ const appInsights = createRequire(import.meta.url)('applicationinsights') as typ
 // the App Insights connection string — silently does nothing if the file doesn't exist
 // (CI/Azure set the real env var directly). Resolved relative to this file so it works
 // whether run via `tsx` from src/ or as compiled dist/.
-loadEnvFile({ path: path.join(path.dirname(fileURLToPath(import.meta.url)), '../.env.local'), quiet: true });
+loadEnvFile({ path: path.join(path.dirname(fileURLToPath(import.meta.url)), '../.env.local') });
 
 const CONNECTION_STRING = process.env.APPLICATIONINSIGHTS_CONNECTION_STRING;
 const ENVIRONMENT = process.env.NODE_ENV === 'production' ? 'production' : 'development';

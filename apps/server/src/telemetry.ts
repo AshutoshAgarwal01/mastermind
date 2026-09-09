@@ -40,7 +40,8 @@ type Properties = Record<string, string | number | boolean | null | undefined>;
 function stringifyProperties(properties: Properties): Record<string, string> {
   const result: Record<string, string> = { environment: ENVIRONMENT };
   for (const [key, value] of Object.entries(properties)) {
-    if (value !== undefined) result[key] = String(value);
+    if (value === undefined || value === null) continue;
+    result[key] = String(value);
   }
   return result;
 }

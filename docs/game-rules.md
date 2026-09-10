@@ -36,6 +36,9 @@ Two roles exist: **Coder** and **Decoder**.
 - Can see their **own** guesses and feedback.
 - Can see **other players' feedback** (number of correct/incorrect peg
   matches), but **not** their actual guessed sequences.
+- Gets exactly **one hint per game**: on request, reveals the correct color
+  for any single peg slot of their choice in the current round, filling it
+  in for them. Once used, it cannot be used again for the rest of the game.
 
 ### Role selection (start of game, after lobby fills)
 1. Each player chooses whether they want to be Coder or Decoder. Voting has a
@@ -59,7 +62,7 @@ Two roles exist: **Coder** and **Decoder**.
 
 - The **host** creates a lobby/room and chooses, before anyone joins:
   - **Difficulty** (see §7), which sets the round timer and max round count.
-  - **Peg count** (4, 6, or 8 pegs — see §7).
+  - **Peg count** (4, 5, or 6 pegs — see §7).
 - Creating the lobby generates a short, unique **room code**. The host shares
   this code with other players out-of-band (voice, chat, etc.).
 - Other players join by entering the room code and typing their name tag.
@@ -77,9 +80,12 @@ Two roles exist: **Coder** and **Decoder**.
 - A **round** ends when either:
   - all Decoders have submitted a guess for that round, or
   - the round timer expires.
-- If a Decoder doesn't submit a guess before the timer expires, their **guess
-  from the previous round carries over** and the round is still counted for
-  them (they get the same feedback as before, since the guess didn't change).
+- If a Decoder doesn't submit a guess before the timer expires: if they had
+  already filled in every peg slot (just hadn't pressed Submit yet), that
+  guess is auto-submitted on their behalf; otherwise their **guess from the
+  previous round carries over** and the round is still counted for them
+  (they get the same feedback as before, since the guess didn't change).
+  Either way it's recorded as a timeout for that round.
 - Rounds always resolve on schedule — the timer is never paused or extended
   for anyone, connected or not.
 - After a round fully resolves, the game checks whether anyone cracked the
@@ -100,7 +106,7 @@ Chosen by the host when creating the lobby (not voted on by players).
 | Moderate    | 45s         | 10         |
 | Impossible  | 20s         | 8          |
 
-- Peg count: host also chooses **4, 6, or 8 pegs** for the secret code length.
+- Peg count: host also chooses **4, 5, or 6 pegs** for the secret code length.
 - Colors: fixed at **6 colors** for now, regardless of peg count (duplicate
   colors within the code are allowed). See "Future Ideas" for a possible
   upgrade here.

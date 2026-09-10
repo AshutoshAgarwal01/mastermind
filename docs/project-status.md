@@ -70,10 +70,13 @@ apps/
                             human Coder to choose the code, or a "waiting…" message + animated
                             random-fill peg row (WaitingPegAnimation) for everyone else; round
                             timer only starts once submitted
-        MainGame            Branches Decoder view (own board + other-Decoders feedback sidebar)
-                            vs. Coder view (grid of every Decoder's board, spectator-only, with
-                            a blinking round badge on any Decoder still mid-round)
-        GameEnd             Secret code, ranked winners list, every Decoder's final guess+feedback
+        MainGame            Branches Decoder view (own board + other-Decoders feedback sidebar,
+                            one-hint-per-game 💡 bulb icon in the header) vs. Coder view (grid of
+                            every Decoder's board, spectator-only, with a blinking round badge on
+                            any Decoder still mid-round)
+        GameEnd             Secret code, ranked winners list (🥇), every Decoder's final
+                            guess+feedback, and a large per-viewer result icon/message (🥇 win, or
+                            one of 😅/👏/🌟 depending on how close the loss was)
 root package.json          npm workspaces ("apps/*", "packages/*")
 ```
 
@@ -107,7 +110,25 @@ root package.json          npm workspaces ("apps/*", "packages/*")
   `environment: development|production` property. See [deployment.md](./deployment.md) §7 for the
   App Setting / repo secret still needed to actually enable it, and
   [telemetry.md](./telemetry.md) for the full event list + sample Application Insights queries.
-- Icons: still just the ⚙/✕ characters; `lucide-react` has not been added.
+- **Hints:** each Decoder gets exactly one hint per game. Tapping the 💡 bulb icon in the
+  `MainGame` header arms "hint mode" (every peg in the current draft glows); tapping any peg then
+  asks the server (`request_hint` socket event, server-validated in `Room.requestHint()`) for the
+  secret color at that index and fills it in, after which only that peg keeps the glow and the
+  bulb becomes permanently disabled + struck-through for the rest of the game.
+- **Timeout handling:** if the round timer expires while a Decoder's current draft is fully
+  filled in (even though they never pressed Submit), the server auto-submits that real draft
+  instead of discarding it — the client mirrors the in-progress draft to the server via a
+  fire-and-forget `update_draft` event so the server-authoritative timeout resolution can tell
+  the two cases apart. A still-incomplete draft continues to carry over the previous round's
+  guess, unchanged from the original behavior. Both cases show the same ⏱ icon in the guess
+  history (recolored as an amber "warning", not the original dim gray) since, from the player's
+  perspective, either way still counts as a timeout.
+- **Game End result icons:** the viewer's own outcome is shown as a large icon + message — 🥇
+  "You won!" if they won; otherwise one of 😅/👏/🌟 depending on how close their final guess was
+  (`getLossResult()` in `GameEnd.tsx`). The "Code Cracked!" heading gets a random 🎉/🎊 prefix;
+  the "Out of rounds" heading gets a 🔐 prefix. Winners (and the Coder, when nobody cracks it) are
+  marked with 🥇 in the results list/summary line.
+- Icons: still mostly emoji characters (⚙/✕/💡/🥇/etc.), not `lucide-react` — still not added.
 
 **Planned but NOT yet implemented:** Zod runtime validation of socket payloads (currently only
 TypeScript compile-time typing — a malicious/buggy client could send an invalid payload shape),
@@ -177,7 +198,7 @@ auto-advance also covers the transition into the new `setting-code` phase.
   mid-game currently drops you back to Home with no automatic rejoin flow.
 - No unit tests exist yet (Vitest/RTL planned, not set up). E2E coverage exists (see §3.1) but
   only for two happy-path flows — no regression coverage for kick/disconnect/reconnect, role-vote
-  tie-breaking, timeout carry-over, or the Impossible/6-8-peg variants yet.
+  tie-breaking, timeout carry-over, or the Impossible/6-peg variants yet.
 - Azure App Service deployment is now wired up (resources created, server serves the built
   frontend, GitHub Actions + OIDC pipeline in `.github/workflows/deploy.yml`) — see
   [deployment.md](./deployment.md) for full status and the list of CI/runtime gotchas hit and
@@ -255,14 +276,12 @@ Per-workspace equivalents also work, e.g. `npm run dev --workspace apps/server`,
 2. Client-side auto-reconnect: on load, if a `sessionToken` exists in `sessionStorage` for a
    room code carried in the URL (or last-known room), automatically call `join_room` with it
    before falling back to Home.
-3. Let a human Coder actually type their own secret code (currently always auto-generated),
-   if that's still a desired requirement — needs a small new screen/step before spectator mode.
-4. Add Vitest unit tests for `packages/shared/src/engine.ts` (scoreGuess edge cases with
+3. Add Vitest unit tests for `packages/shared/src/engine.ts` (scoreGuess edge cases with
    duplicate colors, carry-over, blank-round-1 case) and for `apps/server/src/room.ts`'s role
-   vote / round resolution branches.
-5. Azure App Service deployment: Dockerfile or App Service config for `apps/server`, static
+   vote / round resolution branches (including the hint and auto-submit-on-timeout paths).
+4. Azure App Service deployment: Dockerfile or App Service config for `apps/server`, static
    hosting or same-origin serving for the built `apps/web` bundle, WebSockets enabled.
-6. Add `lucide-react` if/when real icons are wanted (currently just ⚙/✕ characters).
-7. Permanent usage analytics (games played/completed, returning users) via a durable ledger
+5. Add `lucide-react` if/when real (non-emoji) icons are wanted.
+6. Permanent usage analytics (games played/completed, returning users) via a durable ledger
    decoupled from Application Insights' retention window — design captured in
    [analytics.md](./analytics.md), not yet implemented.

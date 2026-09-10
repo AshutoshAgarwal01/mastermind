@@ -2,7 +2,7 @@ export type Difficulty = 'easy' | 'moderate' | 'impossible';
 
 export type PegColorId = 'red' | 'blue' | 'green' | 'yellow' | 'purple' | 'orange';
 
-export type PegCount = 4 | 6 | 8;
+export type PegCount = 4 | 5 | 6;
 
 export interface GameSettings {
   difficulty: Difficulty;

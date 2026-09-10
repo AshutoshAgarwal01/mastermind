@@ -46,6 +46,7 @@ export class Room {
   readonly createdAt = Date.now();
   private gameStartedAt: number | null = null;
   private totalTimedOut = 0;
+  private hintUsed = false;
 
   private players = new Map<string, PlayerInternal>();
   private roleVotes = new Map<string, Role>();
@@ -272,7 +273,7 @@ export class Room {
     if (player.hintUsed) throw new RoomError('You already used your hint for this game.');
     if (pegIndex < 0 || pegIndex >= this.settings.pegCount) throw new RoomError('Invalid peg slot.');
     player.hintUsed = true;
-    trackEvent('hint.used', { roomCode: this.roomCode, playerId });
+    this.hintUsed = true;
     return (this.secretCode as PegColorId[])[pegIndex];
   }
 
@@ -370,6 +371,7 @@ export class Room {
       winningRound: this.winners[0]?.round ?? null,
       durationMs: Date.now() - (this.gameStartedAt ?? this.createdAt),
       totalTimeouts: this.totalTimedOut,
+      hintUsed: this.hintUsed,
     });
     this.broadcast();
   }
@@ -398,6 +400,7 @@ export class Room {
     this.winners = [];
     this.gameStartedAt = null;
     this.totalTimedOut = 0;
+    this.hintUsed = false;
     this.broadcast();
   }
 

@@ -40,6 +40,15 @@ export function GuessRow({ entry }: GuessRowProps) {
           >
             ⏱
           </span>
+        ) : entry.autoSubmitted ? (
+          <span
+            className="guess-row__carried"
+            role="img"
+            aria-label="Auto-submitted when time ran out"
+            title="Auto-submitted when time ran out"
+          >
+            ⏱
+          </span>
         ) : null}
       </div>
     </div>

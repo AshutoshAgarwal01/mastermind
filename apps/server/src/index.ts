@@ -9,11 +9,14 @@ import type {
   ClientToServerEvents,
   CreateRoomRequest,
   ErrorResponse,
+  HintResponse,
   JoinRoomRequest,
   JoinRoomResponse,
+  RequestHintRequest,
   ServerToClientEvents,
   SetSecretCodeRequest,
   SubmitGuessRequest,
+  UpdateDraftRequest,
   VoteRoleRequest,
 } from '@mastermind/shared';
 import { RoomManager } from './rooms.js';
@@ -138,6 +141,13 @@ io.on('connection', (socket) => {
     room?.voteRole(loc.playerId, req.role);
   });
 
+  socket.on('update_draft', (req: UpdateDraftRequest) => {
+    const loc = socketLocation.get(socket.id);
+    if (!loc) return;
+    const room = rooms.get(loc.roomCode);
+    room?.updateDraft(loc.playerId, req.guess);
+  });
+
   socket.on('set_secret_code', (req: SetSecretCodeRequest, cb) => {
     withRoom(socket.id, cb, (room, playerId) => {
       room.setSecretCode(playerId, req.code);
@@ -150,6 +160,26 @@ io.on('connection', (socket) => {
       room.submitGuess(playerId, req.guess);
       cb({ ok: true });
     });
+  });
+
+  socket.on('request_hint', (req: RequestHintRequest, cb: (res: HintResponse | ErrorResponse) => void) => {
+    const loc = socketLocation.get(socket.id);
+    if (!loc) {
+      cb({ ok: false, message: 'Not in a room.' });
+      return;
+    }
+    const room = rooms.get(loc.roomCode);
+    if (!room) {
+      cb({ ok: false, message: 'Room no longer exists.' });
+      return;
+    }
+    try {
+      const color = room.requestHint(loc.playerId, req.pegIndex);
+      cb({ ok: true, pegIndex: req.pegIndex, color });
+      broadcastRoom(room.roomCode);
+    } catch (err) {
+      cb(errorResponse(err, { roomCode: loc.roomCode, playerId: loc.playerId }));
+    }
   });
 
   socket.on('play_again', (cb) => {

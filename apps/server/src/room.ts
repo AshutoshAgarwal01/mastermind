@@ -25,6 +25,10 @@ interface PlayerInternal {
   history: RoundEntry[];
   submittedThisRound: boolean;
   submittedAt: number | null;
+  hintUsed: boolean;
+  /** Best-effort mirror of the player's in-progress guess, synced from the client so a round
+   * that times out with a fully-filled draft can be auto-submitted instead of carried over. */
+  draftGuess: (PegColorId | null)[] | null;
 }
 
 export class RoomError extends Error {}
@@ -84,6 +88,8 @@ export class Room {
       history: [],
       submittedThisRound: false,
       submittedAt: null,
+      hintUsed: false,
+      draftGuess: null,
     };
     if (player.isHost) this.hostId = player.id;
     this.players.set(player.id, player);
@@ -209,6 +215,8 @@ export class Room {
       history: [],
       submittedThisRound: false,
       submittedAt: null,
+      hintUsed: false,
+      draftGuess: null,
     };
     this.players.set(bot.id, bot);
   }
@@ -224,6 +232,7 @@ export class Room {
     this.timeLeft = DIFFICULTIES[this.settings.difficulty].roundSeconds;
     for (const p of this.playerList) {
       p.submittedThisRound = false;
+      p.draftGuess = null;
     }
     if (this.tickHandle) clearInterval(this.tickHandle);
     this.tickHandle = setInterval(() => this.tick(), 1000);
@@ -255,7 +264,35 @@ export class Room {
     }
   }
 
-  private recordSubmission(player: PlayerInternal, guess: (PegColorId | null)[], carriedOver: boolean): void {
+  requestHint(playerId: string, pegIndex: number): PegColorId {
+    if (this.status !== 'playing') throw new RoomError('No round in progress.');
+    const player = this.players.get(playerId);
+    if (!player || player.role !== 'decoder') throw new RoomError('Only Decoders can use hints.');
+    if (player.submittedThisRound) throw new RoomError('You already submitted this round.');
+    if (player.hintUsed) throw new RoomError('You already used your hint for this game.');
+    if (pegIndex < 0 || pegIndex >= this.settings.pegCount) throw new RoomError('Invalid peg slot.');
+    player.hintUsed = true;
+    trackEvent('hint.used', { roomCode: this.roomCode, playerId });
+    return (this.secretCode as PegColorId[])[pegIndex];
+  }
+
+  /** Best-effort mirror of a Decoder's in-progress guess, so a round that times out with a
+   * fully-filled draft can be auto-submitted instead of treated as a timeout. Silently ignored
+   * outside an active round — this isn't a user-facing action, just a background sync. */
+  updateDraft(playerId: string, guess: (PegColorId | null)[]): void {
+    if (this.status !== 'playing') return;
+    const player = this.players.get(playerId);
+    if (!player || player.role !== 'decoder' || player.submittedThisRound) return;
+    if (guess.length !== this.settings.pegCount) return;
+    player.draftGuess = guess;
+  }
+
+  private recordSubmission(
+    player: PlayerInternal,
+    guess: (PegColorId | null)[],
+    carriedOver: boolean,
+    autoSubmitted = false,
+  ): void {
     const finalGuess = resolveTimedOutGuess(this.settings.pegCount, player.history, guess);
     const isBlank = finalGuess.every((c) => c === null);
     const { exact, colorOnly } = isBlank
@@ -267,6 +304,7 @@ export class Room {
       exact,
       colorOnly,
       carriedOver,
+      autoSubmitted,
     });
     player.submittedThisRound = true;
     player.submittedAt = Date.now();
@@ -277,13 +315,20 @@ export class Room {
     this.tickHandle = null;
 
     const decoders = this.playerList.filter((p) => p.role === 'decoder');
-    const timedOutCount = decoders.filter((p) => !p.submittedThisRound).length;
-    this.totalTimedOut += timedOutCount;
+    let timedOutCount = 0;
     for (const p of decoders) {
-      if (!p.submittedThisRound) {
+      if (p.submittedThisRound) continue;
+      const draftComplete = p.draftGuess !== null && p.draftGuess.every((c) => c !== null);
+      if (draftComplete) {
+        // Timer ran out, but the player had already filled every slot — auto-submit it rather
+        // than treating it as a timeout.
+        this.recordSubmission(p, p.draftGuess as PegColorId[], false, true);
+      } else {
         this.recordSubmission(p, new Array(this.settings.pegCount).fill(null), true);
+        timedOutCount += 1;
       }
     }
+    this.totalTimedOut += timedOutCount;
 
     const maxRounds = DIFFICULTIES[this.settings.difficulty].maxRounds;
     const crackers = decoders.filter((p) => p.history[p.history.length - 1]?.exact === this.settings.pegCount);
@@ -341,6 +386,8 @@ export class Room {
         p.history = [];
         p.submittedThisRound = false;
         p.submittedAt = null;
+        p.hintUsed = false;
+        p.draftGuess = null;
       }
     }
     this.status = 'lobby';
@@ -379,6 +426,9 @@ export class Room {
       } else if (p.role === 'decoder') {
         const last = p.history[p.history.length - 1];
         base.latestFeedback = last ? { exact: last.exact, colorOnly: last.colorOnly } : null;
+      }
+      if (isSelf) {
+        base.hintUsed = p.hintUsed;
       }
       return base;
     });

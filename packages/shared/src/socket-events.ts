@@ -1,11 +1,14 @@
 import type {
   CreateRoomRequest,
   ErrorResponse,
+  HintResponse,
   JoinRoomRequest,
   JoinRoomResponse,
+  RequestHintRequest,
   RoomStateView,
   SetSecretCodeRequest,
   SubmitGuessRequest,
+  UpdateDraftRequest,
   VoteRoleRequest,
 } from './room.js';
 
@@ -18,6 +21,8 @@ export interface ClientToServerEvents {
   vote_role: (req: VoteRoleRequest) => void;
   set_secret_code: (req: SetSecretCodeRequest, cb: (res: { ok: true } | ErrorResponse) => void) => void;
   submit_guess: (req: SubmitGuessRequest, cb: (res: { ok: true } | ErrorResponse) => void) => void;
+  update_draft: (req: UpdateDraftRequest) => void;
+  request_hint: (req: RequestHintRequest, cb: (res: HintResponse | ErrorResponse) => void) => void;
   play_again: (cb: (res: { ok: true } | ErrorResponse) => void) => void;
   leave_room: () => void;
 }

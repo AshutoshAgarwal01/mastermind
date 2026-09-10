@@ -140,8 +140,15 @@ export function HowToPlay() {
       <h2>Good to know</h2>
       <ul className="tips-list">
         <li>
-          <span aria-hidden="true">⏱️</span> The round timer never pauses — if you don't submit in
-          time, your previous guess carries over automatically.
+          <span aria-hidden="true">⏱️</span> The round timer never pauses. If every peg is filled
+          in when time runs out, that guess is auto-submitted for you; otherwise your previous
+          guess carries over instead. Either way, it still counts as a timeout — only submitting
+          manually avoids that.
+        </li>
+        <li>
+          <span aria-hidden="true">💡</span> Each Decoder gets one hint per game — tap the bulb
+          icon next to the round timer, then tap any peg slot to instantly reveal its correct
+          color.
         </li>
         <li>
           <span aria-hidden="true">🔌</span> Lost connection? Your seat is held — reconnect anytime

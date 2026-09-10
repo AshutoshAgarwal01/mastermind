@@ -10,12 +10,26 @@ export function MainGame() {
   const { state, actions } = useMultiplayer();
   const room = state.room;
   const [openSlot, setOpenSlot] = useState<number | null>(null);
+  const [hintMode, setHintMode] = useState(false);
+  const [hintedPegIndex, setHintedPegIndex] = useState<number | null>(null);
   const boardRef = useRef<HTMLDivElement>(null);
   const tickTimeRef = useRef(0);
+  const prevHintRoundRef = useRef<number | null>(null);
   const [preciseSeconds, setPreciseSeconds] = useState(0);
 
   useEffect(() => {
     boardRef.current?.scrollTo({ top: boardRef.current.scrollHeight, behavior: 'smooth' });
+  }, [room?.round]);
+
+  // A new round means a fresh draft guess — any hint-mode/glow state (and any color palette left
+  // open when the previous round timed out) from the last round is stale.
+  useEffect(() => {
+    if (room?.round !== undefined && room.round !== prevHintRoundRef.current) {
+      prevHintRoundRef.current = room.round;
+      setHintMode(false);
+      setHintedPegIndex(null);
+      setOpenSlot(null);
+    }
   }, [room?.round]);
 
   useEffect(() => {
@@ -40,11 +54,25 @@ export function MainGame() {
   const canSubmit =
     state.currentGuess.length === room.settings.pegCount && state.currentGuess.every((slot) => slot !== null);
   const alreadySubmitted = me.history?.[me.history.length - 1]?.round === room.round;
+  const hintUsedByMe = !!me.hintUsed;
+  const showHintIcon = !isCoder && (hintUsedByMe || !alreadySubmitted);
+  const hintClickable = !isCoder && !hintUsedByMe && !alreadySubmitted;
 
   function handleSelect(color: PegColorId) {
     if (openSlot === null) return;
     actions.setPeg(openSlot, color);
     setOpenSlot(null);
+  }
+
+  function handlePegClick(index: number) {
+    if (hintMode) {
+      setHintMode(false);
+      actions.requestHint(index).then((color) => {
+        if (color) setHintedPegIndex(index);
+      });
+      return;
+    }
+    setOpenSlot(index);
   }
 
   function handleLeave() {
@@ -60,15 +88,29 @@ export function MainGame() {
           <span className="round-indicator__badge">{room.round}</span>
           <span className="round-indicator__total">/{room.maxRounds}</span>
         </span>
-        <button
-          type="button"
-          className="icon-btn btn--leave"
-          onClick={handleLeave}
-          aria-label="Leave Game"
-          title="Leave Game"
-        >
-          ✕
-        </button>
+        <div className="game-header__actions">
+          {showHintIcon ? (
+            <button
+              type="button"
+              className={`icon-btn${hintMode ? ' icon-btn--active' : ''}${hintUsedByMe ? ' icon-btn--used' : ''}`}
+              onClick={hintClickable ? () => setHintMode((prev) => !prev) : undefined}
+              disabled={!hintClickable}
+              aria-label={hintUsedByMe ? 'Hint already used' : hintMode ? 'Cancel hint' : 'Use hint'}
+              title={hintUsedByMe ? 'Hint already used' : hintMode ? 'Cancel hint' : 'Use hint'}
+            >
+              💡
+            </button>
+          ) : null}
+          <button
+            type="button"
+            className="icon-btn btn--leave"
+            onClick={handleLeave}
+            aria-label="Leave Game"
+            title="Leave Game"
+          >
+            ✕
+          </button>
+        </div>
       </header>
 
       <TimerBar
@@ -98,7 +140,12 @@ export function MainGame() {
                   </span>
                   <div className="guess-row__pegs">
                     {state.currentGuess.map((color, i) => (
-                      <PegSlot key={i} colorId={color} onClick={() => setOpenSlot(i)} />
+                      <PegSlot
+                        key={i}
+                        colorId={color}
+                        onClick={() => handlePegClick(i)}
+                        glow={hintMode || hintedPegIndex === i}
+                      />
                     ))}
                   </div>
                 </div>
@@ -116,14 +163,11 @@ export function MainGame() {
               <span className="feedback-dot feedback-dot--color" /> correct color, wrong position
             </span>
             <span>
-              <span className="guess-row__carried" aria-hidden="true">⏱</span> Round timed out
+              <span className="feedback-dot" /> no match
             </span>
           </div>
 
           <div className="screen-actions">
-            <button type="button" className="btn" disabled={alreadySubmitted} onClick={() => actions.clearGuess()}>
-              Clear
-            </button>
             <button
               type="button"
               className="btn btn--primary"

@@ -11,6 +11,8 @@ export interface PlayerPublic {
   history?: RoundEntry[];
   /** Latest round's exact/colorOnly only — sent to other Decoders instead of full history. */
   latestFeedback?: { exact: number; colorOnly: number } | null;
+  /** Only ever populated for the viewer's own player — whether their one hint has been used. */
+  hintUsed?: boolean;
 }
 
 export interface RoomStateView {
@@ -58,10 +60,24 @@ export interface SubmitGuessRequest {
   guess: PegColorId[];
 }
 
+export interface UpdateDraftRequest {
+  guess: (PegColorId | null)[];
+}
+
 export interface SetSecretCodeRequest {
   code: PegColorId[];
 }
 
 export interface VoteRoleRequest {
   role: Role;
+}
+
+export interface RequestHintRequest {
+  pegIndex: number;
+}
+
+export interface HintResponse {
+  ok: true;
+  pegIndex: number;
+  color: PegColorId;
 }

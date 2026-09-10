@@ -6,16 +6,17 @@ interface PegSlotProps {
   colorId: PegColorId | null;
   onClick?: () => void;
   size?: 'small' | 'medium' | 'large';
+  glow?: boolean;
 }
 
-export function PegSlot({ colorId, onClick, size = 'medium' }: PegSlotProps) {
+export function PegSlot({ colorId, onClick, size = 'medium', glow = false }: PegSlotProps) {
   const { state } = useMultiplayer();
   const color = PEG_COLORS.find((c) => c.id === colorId);
 
   return (
     <button
       type="button"
-      className={`peg-slot peg-slot--${size}${onClick ? ' peg-slot--interactive' : ''}`}
+      className={`peg-slot peg-slot--${size}${onClick ? ' peg-slot--interactive' : ''}${glow ? ' peg-slot--hint-glow' : ''}`}
       style={{ backgroundColor: color?.hex ?? 'transparent' }}
       onClick={onClick}
       disabled={!onClick}

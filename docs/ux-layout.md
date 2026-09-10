@@ -119,10 +119,17 @@ it's recorded as a timeout for that round.
   timed-out icon, when present) are **right-aligned** within that row, on the
   same line as the row's pegs whenever there's room. All of a row's feedback
   dots render in a **single line** (never wrapping across peg counts of 4,
-  6, or 8) so the row stays compact and easy to scan.
-- **Guess input**: tap an empty peg slot in the current row → a color palette
-  popup appears → tap a color to fill the slot. Repeat for all slots, then
-  tap **Submit** to lock in the guess for the round.
+  5, or 6) so the row stays compact and easy to scan.
+- **Guess input**: a color drawer is **always visible** pinned at the bottom
+  of the screen (no popup/modal). The first color is pre-selected by default
+  as soon as the guess board appears, so the very first peg tap always works
+  immediately. Tap a color to select it — it highlights (enlarges slightly
+  with an accent-colored ring) — then tap one or more peg slots to fill each
+  with that color; the selection stays active across multiple taps (and
+  across re-taps of the same swatch) so filling several pegs with the same
+  color doesn't require re-selecting it each time — exactly one color is
+  always selected. Tap **Submit** once every slot is filled to lock in the
+  guess for the round.
 - **Sidebar/strip** (no tabs): lists all other players' name tags with only
   their **latest round's feedback summary** (correct-position / correct-color
   counts) — never their actual guessed colors.

@@ -8,7 +8,7 @@ import { useMultiplayer } from '../state/useMultiplayer';
 export function SetSecretCode() {
   const { state, actions } = useMultiplayer();
   const room = state.room;
-  const [openSlot, setOpenSlot] = useState<number | null>(null);
+  const [selectedColor, setSelectedColor] = useState<PegColorId>(PEG_COLORS[0].id);
 
   if (!room) return null;
   const me = room.players.find((p) => p.id === room.viewerId);
@@ -27,10 +27,12 @@ export function SetSecretCode() {
   const canSubmit =
     state.currentGuess.length === room.settings.pegCount && state.currentGuess.every((slot) => slot !== null);
 
-  function handleSelect(color: PegColorId) {
-    if (openSlot === null) return;
-    actions.setPeg(openSlot, color);
-    setOpenSlot(null);
+  function handleSelectColor(color: PegColorId) {
+    setSelectedColor(color);
+  }
+
+  function handlePegClick(index: number) {
+    actions.setPeg(index, selectedColor);
   }
 
   return (
@@ -43,7 +45,7 @@ export function SetSecretCode() {
 
       <div className="guess-row__pegs" style={{ '--peg-count': room.settings.pegCount } as React.CSSProperties}>
         {state.currentGuess.map((color, i) => (
-          <PegSlot key={i} colorId={color} onClick={() => setOpenSlot(i)} />
+          <PegSlot key={i} colorId={color} onClick={() => handlePegClick(i)} />
         ))}
       </div>
 
@@ -61,7 +63,7 @@ export function SetSecretCode() {
         </button>
       </div>
 
-      {openSlot !== null ? <ColorPalette onSelect={handleSelect} onClose={() => setOpenSlot(null)} /> : null}
+      <ColorPalette selectedColor={selectedColor} onSelectColor={handleSelectColor} />
     </section>
   );
 }

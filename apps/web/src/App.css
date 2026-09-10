@@ -679,26 +679,17 @@ legend {
   transition: background-color 0.35s ease;
 }
 
-.color-palette-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.4);
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  z-index: 10;
-}
-
 .color-palette {
+  flex-shrink: 0;
   background: var(--surface);
-  border-radius: 12px 12px 0 0;
-  padding: 20px;
+  border-radius: 16px 16px 0 0;
+  border-top: 1px solid var(--border);
+  padding: 20px 20px 28px;
+  margin: 0 -20px -40px;
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
   justify-content: center;
-  width: 100%;
-  max-width: 480px;
 }
 
 .color-swatch {
@@ -709,6 +700,13 @@ legend {
   color: #fff;
   font-size: 18px;
   cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.color-swatch--selected {
+  transform: scale(1.15);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent);
 }
 
 @media (min-width: 768px) {

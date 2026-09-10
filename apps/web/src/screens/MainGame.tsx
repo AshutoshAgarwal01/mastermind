@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { PEG_COLORS } from '@mastermind/shared';
 import type { PegColorId, PlayerPublic } from '@mastermind/shared';
 import { GuessRow } from '../components/GuessRow';
 import { PegSlot } from '../components/PegSlot';
@@ -9,7 +10,7 @@ import { useMultiplayer } from '../state/useMultiplayer';
 export function MainGame() {
   const { state, actions } = useMultiplayer();
   const room = state.room;
-  const [openSlot, setOpenSlot] = useState<number | null>(null);
+  const [selectedColor, setSelectedColor] = useState<PegColorId>(PEG_COLORS[0].id);
   const [hintMode, setHintMode] = useState(false);
   const [hintedPegIndex, setHintedPegIndex] = useState<number | null>(null);
   const boardRef = useRef<HTMLDivElement>(null);
@@ -21,14 +22,14 @@ export function MainGame() {
     boardRef.current?.scrollTo({ top: boardRef.current.scrollHeight, behavior: 'smooth' });
   }, [room?.round]);
 
-  // A new round means a fresh draft guess — any hint-mode/glow state (and any color palette left
-  // open when the previous round timed out) from the last round is stale.
+  // A new round means a fresh draft guess — any hint-mode/glow state from the last round is
+  // stale, and the color selection resets back to the first swatch.
   useEffect(() => {
     if (room?.round !== undefined && room.round !== prevHintRoundRef.current) {
       prevHintRoundRef.current = room.round;
       setHintMode(false);
       setHintedPegIndex(null);
-      setOpenSlot(null);
+      setSelectedColor(PEG_COLORS[0].id);
     }
   }, [room?.round]);
 
@@ -58,10 +59,8 @@ export function MainGame() {
   const showHintIcon = !isCoder && (hintUsedByMe || !alreadySubmitted);
   const hintClickable = !isCoder && !hintUsedByMe && !alreadySubmitted;
 
-  function handleSelect(color: PegColorId) {
-    if (openSlot === null) return;
-    actions.setPeg(openSlot, color);
-    setOpenSlot(null);
+  function handleSelectColor(color: PegColorId) {
+    setSelectedColor(color);
   }
 
   function handlePegClick(index: number) {
@@ -72,7 +71,7 @@ export function MainGame() {
       });
       return;
     }
-    setOpenSlot(index);
+    actions.setPeg(index, selectedColor);
   }
 
   function handleLeave() {
@@ -178,7 +177,7 @@ export function MainGame() {
             </button>
           </div>
 
-          {openSlot !== null ? <ColorPalette onSelect={handleSelect} onClose={() => setOpenSlot(null)} /> : null}
+          <ColorPalette selectedColor={selectedColor} onSelectColor={handleSelectColor} />
         </>
       )}
     </section>

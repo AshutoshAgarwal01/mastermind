@@ -71,7 +71,8 @@ export function HowToPlay() {
 
       <h2>Picking peg colors</h2>
       <p>
-        Tap an empty slot, then tap a color to fill it. There are {PEG_COLORS.length} colors to choose from — the
+        Tap a color in the drawer at the bottom to select it (it'll highlight), then tap one or
+        more empty slots to fill them. There are {PEG_COLORS.length} colors to choose from — the
         same colors are used whether you're the Coder setting the code or a Decoder guessing it.
       </p>
       <div className="peg-swatch-row">

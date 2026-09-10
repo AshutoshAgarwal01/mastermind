@@ -40,8 +40,9 @@ apps/
                             guess, theme, colorblind), wraps every socket action in a promise
         useMultiplayer.ts   Context object + hook + shared state/action types (split out for
                             react-refresh/only-export-components, same pattern as before)
-      components/          PegSlot, ColorPalette, GuessRow — unchanged, now import types from
-                            @mastermind/shared instead of a local game/ module. TimerBar NEW —
+      components/          PegSlot, ColorPalette, GuessRow — ColorPalette is now an always-visible
+                            bottom drawer (not a popup/modal): tap a color to select/highlight it,
+                            then tap one or more pegs to fill them with that color. TimerBar NEW —
                             shared countdown bar (fill %, red "low time" state under 25%, optional
                             sub-second precision) used by both RoleVote (15s vote) and MainGame
                             (round timer) for a consistent look.
@@ -226,9 +227,10 @@ both flows live in the browser:
   sets the secret code via `SetSecretCode` -> Bob submits the exact code -> asserts a perfect
   "4 correct position, 0 correct color" score and the shared "Code Cracked!" Game End screen on
   both pages -> asserts only the host sees "Play Again".
-- `e2e/helpers.ts` — shared helpers: `fillPegs` (clicks empty peg slots + the color palette
-  overlay), `getRoomCode` (reads the Lobby's room code), `dismissRoleReveal` (clicks Continue on
-  RoleReveal, tolerating the 3s auto-advance already having fired).
+- `e2e/helpers.ts` — shared helpers: `fillPegs` (taps a color in the always-visible color drawer,
+  then an empty peg slot, per color), `getRoomCode` (reads the Lobby's room code),
+  `dismissRoleReveal` (clicks Continue on RoleReveal, tolerating the 3s auto-advance already
+  having fired).
 - Config: `playwright.config.ts` at the repo root auto-starts both `apps/server` and `apps/web`
   dev servers (`webServer` array, `reuseExistingServer` outside CI) before running tests against
   `http://localhost:5173`.

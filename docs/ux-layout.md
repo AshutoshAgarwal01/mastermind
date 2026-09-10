@@ -42,7 +42,7 @@ flowchart TD
 
 ### 3.2 Create Game (Host)
 - Host picks **difficulty** (Easy / Moderate / Impossible) and **peg count**
-  (4 / 6 / 8).
+  (4 / 5 / 6).
 - On confirm, a room code is generated and shown prominently (large, easy to
   read/share), then the host is taken into the Lobby.
 
@@ -93,27 +93,43 @@ numeric counter switches from whole seconds (e.g. "5s") to **hundredths of a
 second** (e.g. "4.73s"), ticking down smoothly to add urgency/excitement in
 the final stretch of the round; outside the low zone it shows plain whole
 seconds. When the timer hits zero, the current guess auto-locks: if the
-player hadn't pressed Submit, their previous round's guess is reused
-automatically (per rules), and any in-progress unsubmitted edits are
-discarded.
+player had fully filled in every peg slot (even without pressing Submit),
+that guess is auto-submitted on their behalf; if it was still incomplete,
+their previous round's guess carries over instead (per rules). Either way
+it's recorded as a timeout for that round.
 
 ### 4.1 Decoder view
 - **Own guess board**: large and central. Shows **full history** — every past
   round's guess as a row, stacking downward, each with its feedback (correct
   position / correct color counts), classic Mastermind style.
+- **One hint per game**: a 💡 bulb icon in the header (next to the ✕ Leave Game
+  icon) arms "hint mode" — every peg in the current draft row glows to invite
+  a tap. Tapping any peg reveals the secret color for that position and fills
+  it in automatically; the glow then narrows to just that one peg for the
+  rest of the round. Used exactly once per game — the bulb stays visible but
+  disabled (greyed out, diagonal strike) afterward as a reminder it's spent.
 - **Feedback legend**: a persistent legend below the guess board explains the
   feedback indicators: a **green dot** = correct color & position, a
-  **yellow dot** = correct color but wrong position, and a **⏱ clock icon**
-  = "Round timed out" (the round's guess was auto-submitted/carried over
-  because the player didn't press Submit in time).
+  **yellow dot** = correct color but wrong position, a plain dot = no match.
+  The **⏱ clock icon** on a history row (styled as a warning color, not a
+  muted one) means that round's guess was either carried over or
+  auto-submitted because Submit wasn't pressed in time — either way it counts
+  as a timeout, so the icon doesn't distinguish which of the two happened.
 - **Feedback circle positioning**: each row's feedback dots (and the ⏱
   timed-out icon, when present) are **right-aligned** within that row, on the
   same line as the row's pegs whenever there's room. All of a row's feedback
   dots render in a **single line** (never wrapping across peg counts of 4,
-  6, or 8) so the row stays compact and easy to scan.
-- **Guess input**: tap an empty peg slot in the current row → a color palette
-  popup appears → tap a color to fill the slot. Repeat for all slots, then
-  tap **Submit** to lock in the guess for the round.
+  5, or 6) so the row stays compact and easy to scan.
+- **Guess input**: a color drawer is **always visible** pinned at the bottom
+  of the screen (no popup/modal). The first color is pre-selected by default
+  as soon as the guess board appears, so the very first peg tap always works
+  immediately. Tap a color to select it — it highlights (enlarges slightly
+  with an accent-colored ring) — then tap one or more peg slots to fill each
+  with that color; the selection stays active across multiple taps (and
+  across re-taps of the same swatch) so filling several pegs with the same
+  color doesn't require re-selecting it each time — exactly one color is
+  always selected. Tap **Submit** once every slot is filled to lock in the
+  guess for the round.
 - **Sidebar/strip** (no tabs): lists all other players' name tags with only
   their **latest round's feedback summary** (correct-position / correct-color
   counts) — never their actual guessed colors.
@@ -127,14 +143,21 @@ discarded.
 ## 5. Game End Screen
 
 - Reveals the **secret code**.
+- **Result banner**: a large icon + short message reflecting the *viewer's own* outcome — 🥇
+  "You won!" for a winner (a cracker, or the Coder when nobody cracks it); otherwise one of
+  😅/👏/🌟 for a loser, chosen by how close their final guess was (near-miss, rough round, or a
+  solid middle-ground effort, respectively) — never a discouraging icon.
+- The heading itself gets a matching icon too: a random 🎉/🎊 prefix on "Code Cracked!", or a 🔐
+  prefix on "Out of rounds".
 - **Final guess reveal**: each Decoder's **last submitted guess** is shown
   alongside its feedback (same row style as the guess board — pegs, feedback
   dots, carried-over icon), so players can see how close the final attempt
   was. In multiplayer, this is shown **for every Decoder**, not just the
   viewer's own guess.
 - **Leaderboard/ranking** of everyone who cracked the code, ordered by
-  earliest submission timestamp (1st, 2nd, 3rd, ...); if no one cracked it,
-  shows the loss outcome with the Coder called out as winner.
+  earliest submission timestamp (1st, 2nd, 3rd, ...), each marked with 🥇; if
+  no one cracked it, shows the loss outcome with the Coder called out (🥇) as
+  winner.
 - Actions: **Play Again** (back to Lobby, same room) or **Return to Home**.
 
 ## 6. Responsive Behavior

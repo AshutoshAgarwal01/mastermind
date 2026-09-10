@@ -78,6 +78,14 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
     }
   }, [room?.status, room?.round, room?.settings.pegCount]);
 
+  // Mirror the in-progress draft to the server so a round that times out with every slot
+  // already filled in can be auto-submitted instead of treated as a timeout.
+  useEffect(() => {
+    if (room?.status === 'playing') {
+      getSocket().emit('update_draft', { guess: currentGuess });
+    }
+  }, [currentGuess, room?.status]);
+
   // Report the screen the player is actually looking at (in-room status takes over from the
   // pre-room screen state once a room exists).
   useEffect(() => {
@@ -183,6 +191,24 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
     });
   }, [currentGuess]);
 
+  const requestHint = useCallback(
+    async (pegIndex: number): Promise<PegColorId | null> => {
+      const socket = getSocket();
+      return new Promise<PegColorId | null>((resolve) => {
+        socket.emit('request_hint', { pegIndex }, (res) => {
+          if (res.ok) {
+            setPeg(pegIndex, res.color);
+            resolve(res.color);
+          } else {
+            setJoinError(res.message);
+            resolve(null);
+          }
+        });
+      });
+    },
+    [setPeg],
+  );
+
   const submitSecretCode = useCallback(async () => {
     if (currentGuess.some((c) => c === null)) return;
     const socket = getSocket();
@@ -256,6 +282,7 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
     setPeg,
     clearGuess,
     submitGuess,
+    requestHint,
     submitSecretCode,
     acknowledgeRoleReveal,
     playAgain,

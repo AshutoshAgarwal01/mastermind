@@ -36,6 +36,7 @@ export interface MultiplayerActions {
   setPeg: (index: number, color: PegColorId) => void;
   clearGuess: () => void;
   submitGuess: () => Promise<void>;
+  requestHint: (pegIndex: number) => Promise<PegColorId | null>;
   submitSecretCode: () => Promise<void>;
   acknowledgeRoleReveal: () => void;
   playAgain: () => Promise<void>;

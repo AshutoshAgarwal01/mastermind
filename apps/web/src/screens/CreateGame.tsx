@@ -4,7 +4,7 @@ import type { Difficulty, PegCount } from '@mastermind/shared';
 import { useMultiplayer } from '../state/useMultiplayer';
 
 const DIFFICULTY_OPTIONS: Difficulty[] = ['easy', 'moderate', 'impossible'];
-const PEG_OPTIONS: PegCount[] = [4, 6, 8];
+const PEG_OPTIONS: PegCount[] = [4, 5, 6];
 
 export function CreateGame() {
   const { state, actions } = useMultiplayer();

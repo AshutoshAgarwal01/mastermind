@@ -51,7 +51,7 @@ Fired in the `Room` constructor, when a room is first created.
 | --- | --- | --- |
 | `roomCode` | string | 5-char room code |
 | `difficulty` | string | `easy` \| `moderate` \| `impossible` |
-| `pegCount` | number | 4 \| 6 \| 8 |
+| `pegCount` | number | 4 \| 5 \| 6 |
 
 ```kusto
 customEvents
@@ -134,7 +134,7 @@ Fired in `Room.startGame()` once the host explicitly starts (transition out of `
 | --- | --- | --- |
 | `roomCode` | string | room code |
 | `difficulty` | string | `easy` \| `moderate` \| `impossible` |
-| `pegCount` | number | 4 \| 6 \| 8 |
+| `pegCount` | number | 4 \| 5 \| 6 |
 | `humanCount` | number | number of human players (bots not counted) |
 
 ```kusto
@@ -158,22 +158,24 @@ would be the single highest-volume event in the whole set (up to `maxRounds` per
 | --- | --- | --- |
 | `roomCode` | string | room code |
 | `difficulty` | string | `easy` \| `moderate` \| `impossible` |
-| `pegCount` | number | 4 \| 6 \| 8 |
+| `pegCount` | number | 4 \| 5 \| 6 |
 | `playerCount` | number | total players (humans + bot) at game end |
 | `roundsPlayed` | number | final round number reached |
 | `didWin` | boolean | true if at least one Decoder cracked the code |
 | `winningRound` | number \| null | round the first cracker won on, `null` if nobody won |
 | `durationMs` | number | wall-clock time from `game.started` to `game.ended` |
 | `totalTimeouts` | number | sum of Decoder timeouts (carried-over guesses) across every round of the game |
+| `hintUsed` | boolean | true if any Decoder used their one-per-game hint during this game |
 
 ```kusto
 customEvents
 | where name == "game.ended"
 | extend didWin = tobool(customDimensions.didWin), durationMs = todouble(customDimensions.durationMs),
          roundsPlayed = toint(customDimensions.roundsPlayed), difficulty = tostring(customDimensions.difficulty),
-         totalTimeouts = toint(customDimensions.totalTimeouts)
+         totalTimeouts = toint(customDimensions.totalTimeouts), hintUsed = tobool(customDimensions.hintUsed)
 | summarize games = count(), winRate = avg(iif(didWin, 1.0, 0.0)), avgDurationMs = avg(durationMs),
-            avgRoundsPlayed = avg(roundsPlayed), avgTimeouts = avg(totalTimeouts) by difficulty
+            avgRoundsPlayed = avg(roundsPlayed), avgTimeouts = avg(totalTimeouts),
+            hintRate = avg(iif(hintUsed, 1.0, 0.0)) by difficulty
 | order by difficulty asc
 ```
 

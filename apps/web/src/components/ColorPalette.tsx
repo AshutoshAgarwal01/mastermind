@@ -12,19 +12,21 @@ export function ColorPalette({ selectedColor, onSelectColor }: ColorPaletteProps
 
   return (
     <div className="color-palette">
-      {PEG_COLORS.map((color) => (
-        <button
-          key={color.id}
-          type="button"
-          className={`color-swatch${selectedColor === color.id ? ' color-swatch--selected' : ''}`}
-          style={{ backgroundColor: color.hex }}
-          onClick={() => onSelectColor(color.id)}
-          aria-label={color.label}
-          aria-pressed={selectedColor === color.id}
-        >
-          {state.colorBlind ? <span aria-hidden="true">{color.symbol}</span> : null}
-        </button>
-      ))}
+      <div className="color-palette__swatches">
+        {PEG_COLORS.map((color) => (
+          <button
+            key={color.id}
+            type="button"
+            className={`color-swatch${selectedColor === color.id ? ' color-swatch--selected' : ''}`}
+            style={{ backgroundColor: color.hex }}
+            onClick={() => onSelectColor(color.id)}
+            aria-label={color.label}
+            aria-pressed={selectedColor === color.id}
+          >
+            {state.colorBlind ? <span aria-hidden="true">{color.symbol}</span> : null}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }

@@ -43,7 +43,7 @@ function Screens() {
     case 'playing':
       return state.showRoleReveal ? <RoleReveal /> : <MainGame />
     case 'ended':
-      return <GameEnd />
+      return state.showGameReview ? <MainGame /> : <GameEnd />;
     default:
       return <Home />
   }

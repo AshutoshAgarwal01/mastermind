@@ -11,23 +11,28 @@ import type {
 } from '@mastermind/shared';
 import { getSocket } from './socketClient';
 import { MultiplayerContext } from './useMultiplayer';
-import type { MultiplayerActions, MultiplayerState, Theme, UiScreen } from './useMultiplayer';
+import type { MultiplayerActions, MultiplayerState, PegStyle, Theme, UiScreen } from './useMultiplayer';
 import { trackEvent, trackPageView } from './telemetry';
 
 const THEME_KEY = 'mastermind:theme';
 const COLORBLIND_KEY = 'mastermind:colorblind';
+const PEG_STYLE_KEY = 'mastermind:pegstyle';
 const SESSION_KEY_PREFIX = 'mastermind:session:';
 
 export function MultiplayerProvider({ children }: { children: ReactNode }) {
   const [screen, setScreen] = useState<UiScreen>('home');
   const [theme, setThemeState] = useState<Theme>(() => (localStorage.getItem(THEME_KEY) as Theme | null) ?? 'light');
   const [colorBlind, setColorBlind] = useState(() => localStorage.getItem(COLORBLIND_KEY) === 'true');
+  const [pegStyle, setPegStyleState] = useState<PegStyle>(
+    () => (localStorage.getItem(PEG_STYLE_KEY) as PegStyle | null) ?? 'bordered',
+  );
   const [playerName, setPlayerNameState] = useState('');
   const [room, setRoom] = useState<RoomStateView | null>(null);
   const [joinError, setJoinError] = useState<string | null>(null);
   const [currentGuess, setCurrentGuess] = useState<(PegColorId | null)[]>([]);
   const [roleVoteChoice, setRoleVoteChoice] = useState<Role | null>(null);
   const [showRoleReveal, setShowRoleReveal] = useState(false);
+  const [showGameReview, setShowGameReview] = useState(false);
   const [connecting, setConnecting] = useState(false);
 
   const roomCodeRef = useRef<string | null>(null);
@@ -43,6 +48,10 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
   }, [colorBlind]);
 
   useEffect(() => {
+    document.documentElement.dataset.pegStyle = pegStyle;
+  }, [pegStyle]);
+
+  useEffect(() => {
     const socket = getSocket();
     const onRoomUpdate = (next: RoomStateView) => {
       setRoom((prevRoom) => {
@@ -52,6 +61,11 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
           (next.status === 'setting-code' || next.status === 'playing');
         if (enteringActive) {
           setShowRoleReveal(true);
+        }
+        // A new game starting after review left the previous game's board on screen —
+        // drop back to the normal flow once the room moves on from 'ended'.
+        if (prevStatus === 'ended' && next.status !== 'ended') {
+          setShowGameReview(false);
         }
         return next;
       });
@@ -224,6 +238,14 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
     setShowRoleReveal(false);
   }, []);
 
+  const reviewGame = useCallback(() => {
+    setShowGameReview(true);
+  }, []);
+
+  const exitGameReview = useCallback(() => {
+    setShowGameReview(false);
+  }, []);
+
   const playAgain = useCallback(async () => {
     const socket = getSocket();
     await new Promise<void>((resolve) => {
@@ -239,8 +261,13 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
     if (roomCodeRef.current) sessionStorage.removeItem(SESSION_KEY_PREFIX + roomCodeRef.current);
     setRoom(null);
     setShowRoleReveal(false);
+    setShowGameReview(false);
     setRoleVoteChoice(null);
     setScreen('home');
+    // Clear any unsubmitted draft guess — otherwise it silently reappears (stale, filled-in)
+    // the next time this player reaches the 'playing' status in any room.
+    setCurrentGuess([]);
+    prevRoundRef.current = null;
   }, []);
 
   const setTheme = useCallback((next: Theme) => {
@@ -256,16 +283,23 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const setPegStyle = useCallback((next: PegStyle) => {
+    localStorage.setItem(PEG_STYLE_KEY, next);
+    setPegStyleState(next);
+  }, []);
+
   const state: MultiplayerState = {
     screen,
     theme,
     colorBlind,
+    pegStyle,
     playerName,
     room,
     joinError,
     currentGuess,
     roleVoteChoice,
     showRoleReveal,
+    showGameReview,
     connecting,
   };
 
@@ -273,6 +307,7 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
     goTo: setScreen,
     setTheme,
     toggleColorBlind,
+    setPegStyle,
     setPlayerName: setPlayerNameState,
     createRoom,
     joinRoom,
@@ -287,6 +322,8 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
     acknowledgeRoleReveal,
     playAgain,
     leaveRoom,
+    reviewGame,
+    exitGameReview,
   };
 
   return <MultiplayerContext.Provider value={{ state, actions }}>{children}</MultiplayerContext.Provider>;

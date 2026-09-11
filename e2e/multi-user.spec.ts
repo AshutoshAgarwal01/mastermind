@@ -2,6 +2,10 @@ import { test, expect } from '@playwright/test';
 import { dismissRoleReveal, fillPegs, getRoomCode } from './helpers';
 
 test('multi-user: two humans vote roles, Coder sets the code, Decoder cracks it', async ({ browser }) => {
+  // Runs alongside other spec files' tests in parallel workers; give it headroom above
+  // Playwright's default 30s budget so worker-machine contention doesn't cause flaky failures.
+  test.setTimeout(60_000);
+
   const hostContext = await browser.newContext();
   const guestContext = await browser.newContext();
   const host = await hostContext.newPage();
@@ -64,7 +68,8 @@ test('multi-user: two humans vote roles, Coder sets the code, Decoder cracks it'
     );
     await expect(guest.getByRole('heading', { name: 'Code Cracked!' })).toBeVisible({ timeout: 10_000 });
     await expect(host.getByRole('heading', { name: 'Code Cracked!' })).toBeVisible({ timeout: 10_000 });
-    await expect(host.getByText('#1 Bob')).toBeVisible();
+    await expect(host.locator('.leaderboard__name', { hasText: 'Bob' })).toBeVisible();
+    await expect(host.getByRole('img', { name: 'Rank 1, cracked it on round 1' })).toBeVisible();
 
     // Only the host (room creator) gets a Play Again button.
     await expect(host.getByRole('button', { name: 'Play Again' })).toBeVisible();

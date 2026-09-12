@@ -67,9 +67,10 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
         // drop back to the normal flow once the room moves on from 'ended'.
         if (prevStatus === 'ended' && next.status !== 'ended') {
           setShowGameReview(false);
-          // Locked pegs are a per-game convenience — a fresh game (possibly a different
-          // peg count) should always start with nothing locked.
+          // A fresh game must not retain the previous game's draft or lock state.
           setLockedPegs([]);
+          setCurrentGuess([]);
+          prevRoundRef.current = null
         }
         return next;
       });

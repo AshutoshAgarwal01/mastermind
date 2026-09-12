@@ -78,9 +78,9 @@ flowchart TD
 Layout differs by role, but shares a persistent header: a compact **round
 indicator** — a small filled circular badge with the current round number
 (e.g. "3") followed by a muted "/10" — instead of a "Round 3 / 10" text
-label, to keep the header lightweight. A compact **✕ "Leave Game" icon
-button** sits at the far right of the header. Tapping it asks for
-confirmation (progress will be lost) before returning to Home.
+label, to keep the header lightweight. A compact **❌ "Leave Game" icon
+button** sits at the far right of the header. Tapping it opens an in-app
+confirmation dialog (progress will be lost) before returning to Home.
 
 Directly below the header is a **round timer row**: a **depleting progress
 bar** (fills the row, shrinks from full to empty as the round runs out) with
@@ -102,7 +102,7 @@ it's recorded as a timeout for that round.
 - **Own guess board**: large and central. Shows **full history** — every past
   round's guess as a row, stacking downward, each with its feedback (correct
   position / correct color counts), classic Mastermind style.
-- **One hint per game**: a 💡 bulb icon in the header (next to the ✕ Leave Game
+- **One hint per game**: a 💡 bulb icon in the header (next to the ❌ Leave Game
   icon) arms "hint mode" — every peg in the current draft row glows to invite
   a tap. Tapping any peg reveals the secret color for that position and fills
   it in automatically; the glow then narrows to just that one peg for the

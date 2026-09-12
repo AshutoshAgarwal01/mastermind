@@ -10,6 +10,8 @@
 
 .screen--game {
   overflow-y: hidden;
+  padding: 16px 16px 20px;
+  gap: 10px;
 }
 
 .room-code {
@@ -45,9 +47,9 @@
 .decoder-sidebar {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
   border-top: 1px solid var(--border);
-  padding-top: 8px;
+  padding-top: 6px;
   flex-shrink: 0;
 }
 
@@ -92,9 +94,81 @@
   }
 }
 
-.winners-list {
-  margin: 0;
-  padding-left: 20px;
+.result-pill {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 10px 16px;
+}
+
+.result-pill__icon {
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.bot-badge {
+  margin-right: 4px;
+}
+
+.leaderboard {
+  min-width: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.leaderboard__row {
+  display: grid;
+  grid-template-columns: 26px 1fr;
+  align-items: center;
+  column-gap: 8px;
+  row-gap: 4px;
+}
+
+.leaderboard__row-header {
+  display: contents;
+}
+
+.leaderboard__row .guess-row {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 26px 1fr auto;
+  align-items: center;
+  column-gap: 8px;
+  padding: 0;
+}
+
+.leaderboard__row .guess-row__main {
+  display: contents;
+}
+
+.leaderboard__badge {
+  width: 26px;
+  flex-shrink: 0;
+  text-align: center;
+  font-size: 16px;
+}
+
+.leaderboard__name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.leaderboard__medal {
+  margin-right: 4px;
+}
+
+.leaderboard__empty {
+  grid-column: 1 / -1;
+  font-size: 12px;
+  font-style: italic;
+  opacity: 0.6;
 }
 
 .result-banner {
@@ -120,18 +194,6 @@
   font-weight: 700;
   font-size: 18px;
   margin-top: 0;
-}
-
-.final-guess-row {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.final-guess-row__name {
-  font-size: 13px;
-  font-weight: 600;
-  opacity: 0.8;
 }
 
 .home-actions {
@@ -215,6 +277,22 @@
   }
 }
 
+.screen-actions.screen-actions--row {
+  flex-direction: row;
+  gap: 8px;
+}
+
+.screen-actions.screen-actions--row .btn {
+  width: auto;
+  flex: 1 1 0;
+}
+
+.btn--compact {
+  padding: 12px 8px;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
 fieldset {
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -233,6 +311,12 @@ legend {
   gap: 8px;
   padding: 6px 0;
   text-align: left;
+}
+
+.peg-style-picker__preview {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
 }
 
 .field {
@@ -433,7 +517,7 @@ legend {
   align-items: center;
   gap: 12px;
   font-weight: 600;
-  padding-bottom: 8px;
+  padding-bottom: 6px;
   border-bottom: 1px solid var(--border);
 }
 
@@ -480,11 +564,45 @@ legend {
   line-height: 1;
 }
 
+.btn--back {
+  color: var(--accent);
+}
+
+.confirm-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 20;
+}
+
+.confirm-dialog {
+  background: var(--surface);
+  border-radius: 12px;
+  padding: 20px;
+  width: 100%;
+  max-width: 320px;
+  box-shadow: var(--shadow);
+}
+
+.confirm-dialog p {
+  margin: 0 0 16px;
+}
+
+.confirm-dialog__actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
 .timer-row {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 10px;
+  margin-bottom: 6px;
 }
 
 .timer {
@@ -521,7 +639,7 @@ legend {
   min-height: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 4px;
   overflow-y: auto;
 }
 
@@ -530,7 +648,7 @@ legend {
   grid-template-columns: 1fr auto;
   align-items: center;
   column-gap: 10px;
-  padding: 6px 0;
+  padding: 3px 0;
 }
 
 .guess-row__main {
@@ -540,8 +658,8 @@ legend {
 }
 
 .guess-row__round {
-  width: 22px;
-  height: 22px;
+  width: 26px;
+  height: 26px;
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -549,7 +667,7 @@ legend {
   border-radius: 50%;
   background: var(--surface);
   border: 1px solid var(--border);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   color: var(--text-h);
 }
@@ -572,9 +690,9 @@ legend {
 
 .guess-row__pegs {
   display: grid;
-  grid-template-columns: repeat(var(--peg-count, 4), minmax(16px, 44px));
+  grid-template-columns: repeat(var(--peg-count, 4), minmax(24px, 56px));
   justify-content: start;
-  gap: 3px;
+  gap: 4px;
 }
 
 .guess-row__meta {
@@ -601,15 +719,18 @@ legend {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: var(--border);
+  background: var(--text-h);
+  opacity: 0.35;
 }
 
 .feedback-dot--exact {
   background: #16a34a;
+  opacity: 1;
 }
 
 .feedback-dot--color {
   background: #eab308;
+  opacity: 1;
 }
 
 :root[data-colorblind='true'] .feedback-dot--color {
@@ -669,6 +790,30 @@ legend {
   }
 }
 
+/* Dev-only peg style experiments (see SettingsScreen) — 'classic' is the default look above and
+   needs no override. Empty slots keep the classic dashed-looking border regardless of style so
+   they stay visible as placeholders; only FILLED pegs get the alternate treatment. */
+[data-peg-style='flat'] .peg-slot:not(.peg-slot--empty) {
+  border: none;
+}
+
+[data-peg-style='glossy'] .peg-slot:not(.peg-slot--empty) {
+  border: none;
+  background-image: radial-gradient(
+    circle at 32% 28%,
+    rgba(255, 255, 255, 0.55) 0%,
+    rgba(255, 255, 255, 0) 45%,
+    rgba(0, 0, 0, 0.15) 100%
+  );
+}
+
+[data-peg-style='bordered'] .peg-slot:not(.peg-slot--empty) {
+  border: none;
+  box-shadow:
+    inset 0 0 0 2px rgba(0, 0, 0, 0.28),
+    0 2px 4px rgba(0, 0, 0, 0.35);
+}
+
 .waiting-pegs {
   justify-content: center;
   max-width: 240px;
@@ -687,14 +832,27 @@ legend {
   padding: 20px 20px 28px;
   margin: 0 -20px -40px;
   display: flex;
+  align-items: center;
   gap: 12px;
-  flex-wrap: wrap;
-  justify-content: center;
+}
+
+.color-palette__swatches {
+  flex: 1 1 auto;
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 12px;
+}
+
+.screen--game .color-palette {
+  margin: 0 -16px -20px;
+  padding: 12px 16px 16px;
 }
 
 .color-swatch {
-  width: clamp(36px, 11vw, 48px);
-  height: clamp(36px, 11vw, 48px);
+  width: 100%;
+  max-width: 56px;
+  aspect-ratio: 1 / 1;
+  margin: 0 auto;
   border-radius: 50%;
   border: 2px solid var(--border);
   color: #fff;
@@ -707,6 +865,37 @@ legend {
   transform: scale(1.15);
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--accent);
+}
+
+/* Mirrors the .peg-slot style variants above so the color chooser matches the pegs on the board. */
+[data-peg-style='flat'] .color-swatch {
+  border: none;
+}
+
+[data-peg-style='glossy'] .color-swatch {
+  border: none;
+  background-image: radial-gradient(
+    circle at 32% 28%,
+    rgba(255, 255, 255, 0.55) 0%,
+    rgba(255, 255, 255, 0) 45%,
+    rgba(0, 0, 0, 0.15) 100%
+  );
+}
+
+[data-peg-style='bordered'] .color-swatch {
+  border: none;
+  box-shadow:
+    inset 0 0 0 2px rgba(0, 0, 0, 0.28),
+    0 2px 4px rgba(0, 0, 0, 0.35);
+}
+
+/* The 'bordered' variant's own box-shadow would otherwise clobber the selected-swatch accent
+   ring (same property, higher specificity) — combine both into one declaration so selection
+   stays visible under every peg style. */
+[data-peg-style='bordered'] .color-swatch.color-swatch--selected {
+  box-shadow:
+    0 0 0 3px var(--accent),
+    inset 0 0 0 2px rgba(0, 0, 0, 0.28);
 }
 
 @media (min-width: 768px) {

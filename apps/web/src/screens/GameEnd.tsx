@@ -38,6 +38,14 @@ export function GameEnd() {
   const myFinalGuess = me?.role === 'decoder' ? me.history?.[me.history.length - 1] : undefined;
   const loseResult = getLossResult(myFinalGuess, room.settings.pegCount, me?.role === 'coder');
 
+  // Winners first (in cracking order), then everyone else — one merged leaderboard instead of
+  // a separate winners list that repeats names already shown in the final-guesses section.
+  const winnerInfo = new Map(room.winners.map((w, i) => [w.playerId, { rank: i, round: w.round }]));
+  const rankedDecoders = [...decoders].sort(
+    (a, b) => (winnerInfo.get(a.id)?.rank ?? Infinity) - (winnerInfo.get(b.id)?.rank ?? Infinity),
+  );
+  const medalForRank = (rank: number) => (rank === 0 ? '🥇' : rank === 1 ? '🥈' : rank === 2 ? '🥉' : '🏅');
+
   return (
     <section className="screen screen--game-end">
       <h1>{cracked ? `${crackedEmoji} Code Cracked!` : '🔐 Out of rounds'}</h1>
@@ -47,46 +55,71 @@ export function GameEnd() {
       </div>
       <p className="result-banner__text">{didIWin ? 'You won!' : loseResult.text}</p>
 
-      <p>Secret code:</p>
-      <div className="guess-row__pegs" style={{ '--peg-count': room.secretCode.length } as React.CSSProperties}>
-        {room.secretCode.map((color, i) => (
-          <PegSlot key={i} colorId={color} />
-        ))}
+      <div className="result-pill">
+        <span className="result-pill__icon" role="img" aria-label="Secret code">
+          🔑
+        </span>
+        <div className="guess-row__pegs" style={{ '--peg-count': room.secretCode.length } as React.CSSProperties}>
+          {room.secretCode.map((color, i) => (
+            <PegSlot key={i} colorId={color} />
+          ))}
+        </div>
       </div>
 
-      {cracked ? (
-        <ol className="winners-list">
-          {room.winners.map((w, i) => (
-            <li key={w.playerId}>
-              <span aria-hidden="true">🥇</span> #{i + 1} {w.name} — cracked it on round {w.round}
-            </li>
-          ))}
-        </ol>
-      ) : (
+      {!cracked ? (
         <p>
-          <span aria-hidden="true">🥇</span> {coder?.name ?? 'The Coder'} wins — nobody cracked the code in time.
+          <span aria-hidden="true">🥇</span>{' '}
+          {coder?.isBot ? (
+            <span className="bot-badge" role="img" aria-label="Bot" title="Bot">
+              🤖
+            </span>
+          ) : null}
+          {coder?.name ?? 'The Coder'} wins — nobody cracked the code in time.
         </p>
-      )}
+      ) : null}
 
-      <p>Final guesses:</p>
-      {decoders.map((p) => {
-        const finalGuess = p.history?.[p.history.length - 1];
-        if (!finalGuess) return null;
-        return (
-          <div key={p.id} className="final-guess-row">
-            <span className="final-guess-row__name">{p.name}</span>
-            <GuessRow entry={finalGuess} />
-          </div>
-        );
-      })}
+      <div className="result-pill result-pill--board">
+        <div className="leaderboard" role="group" aria-label="Results">
+          {rankedDecoders.map((p, index) => {
+            const info = winnerInfo.get(p.id);
+            const finalGuess = p.history?.[p.history.length - 1];
+            return (
+              <div key={p.id} className="leaderboard__row">
+                <div className="leaderboard__row-header">
+                  {/* Only the first row carries the section icon, in the same column the round-number badge lines up under. */}
+                  <span className="leaderboard__badge" aria-hidden="true">
+                    {index === 0 ? '🎯' : ''}
+                  </span>
+                  <span className="leaderboard__name">
+                    {info ? (
+                      <span
+                        className="leaderboard__medal"
+                        role="img"
+                        aria-label={`Rank ${info.rank + 1}, cracked it on round ${info.round}`}
+                      >
+                        {medalForRank(info.rank)}
+                      </span>
+                    ) : null}
+                    {p.name}
+                  </span>
+                </div>
+                {finalGuess ? <GuessRow entry={finalGuess} /> : <span className="leaderboard__empty">No guess submitted</span>}
+              </div>
+            );
+          })}
+        </div>
+      </div>
 
-      <div className="screen-actions">
+      <div className="screen-actions screen-actions--row">
         {isHost ? (
-          <button type="button" className="btn" onClick={() => actions.playAgain()}>
+          <button type="button" className="btn btn--compact" onClick={() => actions.playAgain()}>
             Play Again
           </button>
         ) : null}
-        <button type="button" className="btn btn--primary" onClick={() => actions.leaveRoom()}>
+        <button type="button" className="btn btn--compact" onClick={() => actions.reviewGame()}>
+          Review Game
+        </button>
+        <button type="button" className="btn btn--primary btn--compact" onClick={() => actions.leaveRoom()}>
           Return to Home
         </button>
       </div>

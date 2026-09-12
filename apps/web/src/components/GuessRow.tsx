@@ -8,6 +8,11 @@ interface GuessRowProps {
 export function GuessRow({ entry }: GuessRowProps) {
   const pegCount = entry.guess.length;
   const empty = pegCount - entry.exact - entry.colorOnly;
+  const carriedLabel = entry.carriedOver
+    ? 'Carried over (round timed out)'
+    : entry.autoSubmitted
+      ? 'Auto-submitted when time ran out'
+      : null;
 
   return (
     <div className="guess-row" style={{ '--peg-count': pegCount } as React.CSSProperties}>
@@ -31,25 +36,18 @@ export function GuessRow({ entry }: GuessRowProps) {
             <span key={`empty-${i}`} className="feedback-dot feedback-dot--empty" />
           ))}
         </div>
-        {entry.carriedOver ? (
-          <span
-            className="guess-row__carried"
-            role="img"
-            aria-label="Carried over (round timed out)"
-            title="Carried over (round timed out)"
-          >
-            ⏱
-          </span>
-        ) : entry.autoSubmitted ? (
-          <span
-            className="guess-row__carried"
-            role="img"
-            aria-label="Auto-submitted when time ran out"
-            title="Auto-submitted when time ran out"
-          >
-            ⏱
-          </span>
-        ) : null}
+        {/* Always reserve the icon's slot (visibility, not mount) so rows without a
+            carried-over/auto-submitted icon don't end up with wider pegs than rows that have one. */}
+        <span
+          className="guess-row__carried"
+          style={carriedLabel ? undefined : { visibility: 'hidden' }}
+          role={carriedLabel ? 'img' : undefined}
+          aria-hidden={carriedLabel ? undefined : true}
+          aria-label={carriedLabel ?? undefined}
+          title={carriedLabel ?? undefined}
+        >
+          ⏱
+        </span>
       </div>
     </div>
   );

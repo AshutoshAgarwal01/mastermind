@@ -13,13 +13,21 @@ export function MainGame() {
   const [selectedColor, setSelectedColor] = useState<PegColorId>(PEG_COLORS[0].id);
   const [hintMode, setHintMode] = useState(false);
   const [hintedPegIndex, setHintedPegIndex] = useState<number | null>(null);
+  const [showLegend, setShowLegend] = useState(false);
+  const [previewAllRounds, setPreviewAllRounds] = useState(false);
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const boardRef = useRef<HTMLDivElement>(null);
+  const leaveDialogRef = useRef<HTMLDivElement>(null);
+  const restoreLeaveFocusRef = useRef(true);
   const tickTimeRef = useRef(0);
   const prevHintRoundRef = useRef<number | null>(null);
   const [preciseSeconds, setPreciseSeconds] = useState(0);
+  const leaveConfirmOpen = room?.status !== 'ended' && showLeaveConfirm;
 
   useEffect(() => {
-    boardRef.current?.scrollTo({ top: boardRef.current.scrollHeight, behavior: 'smooth' });
+    // Scroll the last real row into view rather than to the container's raw scrollHeight —
+    // keeps the newest round visible even when the board needs to scroll.
+    boardRef.current?.lastElementChild?.scrollIntoView({ block: 'end', behavior: 'smooth' });
   }, [room?.round]);
 
   // A new round means a fresh draft guess — any hint-mode/glow state from the last round is
@@ -38,6 +46,41 @@ export function MainGame() {
   }, [room?.timeLeft]);
 
   useEffect(() => {
+    if (!leaveConfirmOpen || !leaveDialogRef.current) return;
+
+    const dialog = leaveDialogRef.current;
+    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const buttons = Array.from(dialog.querySelectorAll<HTMLButtonElement>('button:not([disabled])'));
+    buttons[0]?.focus();
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        setShowLeaveConfirm(false);
+      } else if (event.key === 'Tab' && buttons.length > 0) {
+        const firstButton = buttons[0];
+        const lastButton = buttons[buttons.length - 1];
+        if (!dialog.contains(document.activeElement)) {
+          event.preventDefault();
+          (event.shiftKey ? lastButton : firstButton).focus();
+        } else if (event.shiftKey && document.activeElement === firstButton) {
+          event.preventDefault();
+          lastButton.focus();
+        } else if (!event.shiftKey && document.activeElement === lastButton) {
+          event.preventDefault();
+          firstButton.focus();
+        }
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown, true);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown, true);
+      if (restoreLeaveFocusRef.current && previousFocus?.isConnected) previousFocus.focus();
+    };
+  }, [leaveConfirmOpen]);
+
+  useEffect(() => {
     if (!room) return;
     if (room.timeLeft > room.roundSeconds * 0.25) return;
     const id = setInterval(() => {
@@ -51,12 +94,15 @@ export function MainGame() {
   const me = room.players.find((p) => p.id === room.viewerId);
   if (!me) return null;
 
+  // Reached via the GameEnd screen's "Review Game" button once the room is 'ended' — read-only,
+  // no timer/submitting/hints, just the board as it was left.
+  const isReview = room.status === 'ended';
   const isCoder = me.role === 'coder';
   const canSubmit =
     state.currentGuess.length === room.settings.pegCount && state.currentGuess.every((slot) => slot !== null);
   const alreadySubmitted = me.history?.[me.history.length - 1]?.round === room.round;
   const hintUsedByMe = !!me.hintUsed;
-  const showHintIcon = !isCoder && (hintUsedByMe || !alreadySubmitted);
+  const showHintIcon = !isReview && !isCoder && (hintUsedByMe || !alreadySubmitted);
   const hintClickable = !isCoder && !hintUsedByMe && !alreadySubmitted;
 
   function handleSelectColor(color: PegColorId) {
@@ -75,9 +121,14 @@ export function MainGame() {
   }
 
   function handleLeave() {
-    if (window.confirm('Leave the game? Your progress will be lost.')) {
-      actions.leaveRoom();
+    if (isReview) {
+      actions.exitGameReview();
+      return;
     }
+    // window.confirm() is a blocking native dialog that can be unreliable/unresponsive in
+    // embedded webviews and PWA contexts — use an in-app confirm instead.
+    restoreLeaveFocusRef.current = true;
+    setShowLeaveConfirm(true);
   }
 
   return (
@@ -88,6 +139,30 @@ export function MainGame() {
           <span className="round-indicator__total">/{room.maxRounds}</span>
         </span>
         <div className="game-header__actions">
+          {!isCoder ? (
+            <button
+              type="button"
+              className="info-btn"
+              onClick={() => setShowLegend((prev) => !prev)}
+              aria-pressed={showLegend}
+              aria-label={showLegend ? 'Hide feedback legend' : 'Show feedback legend'}
+              title={showLegend ? 'Hide feedback legend' : 'Show feedback legend'}
+            >
+              ⓘ
+            </button>
+          ) : null}
+          {import.meta.env.DEV && !isCoder && !isReview ? (
+            <button
+              type="button"
+              className="info-btn"
+              onClick={() => setPreviewAllRounds((prev) => !prev)}
+              aria-pressed={previewAllRounds}
+              aria-label={previewAllRounds ? 'Exit round-layout preview' : 'Preview all rounds (testing)'}
+              title={previewAllRounds ? 'Exit round-layout preview' : 'Preview all rounds (testing)'}
+            >
+              🧪
+            </button>
+          ) : null}
           {showHintIcon ? (
             <button
               type="button"
@@ -102,84 +177,141 @@ export function MainGame() {
           ) : null}
           <button
             type="button"
-            className="icon-btn btn--leave"
+            className={`icon-btn btn--leave${isReview ? ' btn--back' : ''}`}
             onClick={handleLeave}
-            aria-label="Leave Game"
-            title="Leave Game"
+            aria-label={isReview ? 'Back to Results' : 'Leave Game'}
+            title={isReview ? 'Back to Results' : 'Leave Game'}
           >
-            ✕
+            {isReview ? '➜' : '❌'}
           </button>
         </div>
       </header>
 
-      <TimerBar
-        secondsLeft={room.timeLeft}
-        totalSeconds={room.roundSeconds}
-        label="Round time remaining"
-        preciseSeconds={preciseSeconds}
-      />
+      {!isReview ? (
+        <TimerBar
+          secondsLeft={room.timeLeft}
+          totalSeconds={room.roundSeconds}
+          label="Round time remaining"
+          preciseSeconds={preciseSeconds}
+        />
+      ) : null}
 
       {isCoder ? (
         <CoderBoards players={room.players} round={room.round} pegCount={room.settings.pegCount} />
       ) : (
         <>
           <div className="guess-board" ref={boardRef}>
-            {(me.history ?? []).map((entry) => (
-              <GuessRow key={entry.round} entry={entry} />
-            ))}
-
-            {!alreadySubmitted ? (
-              <div
-                className="guess-row guess-row--current"
-                style={{ '--peg-count': state.currentGuess.length } as React.CSSProperties}
-              >
-                <div className="guess-row__main">
-                  <span className="guess-row__round" aria-label={`Round ${room.round}`}>
-                    {room.round}
-                  </span>
-                  <div className="guess-row__pegs">
-                    {state.currentGuess.map((color, i) => (
-                      <PegSlot
-                        key={i}
-                        colorId={color}
-                        onClick={() => handlePegClick(i)}
-                        glow={hintMode || hintedPegIndex === i}
-                      />
-                    ))}
+            {previewAllRounds && !isReview ? (
+              Array.from({ length: room.maxRounds }).map((_, i) => (
+                <div key={i} className="guess-row guess-row--current" style={{ '--peg-count': room.settings.pegCount } as React.CSSProperties}>
+                  <div className="guess-row__main">
+                    <span className="guess-row__round" aria-label={`Round ${i + 1}`}>
+                      {i + 1}
+                    </span>
+                    <div className="guess-row__pegs">
+                      {Array.from({ length: room.settings.pegCount }).map((_, j) => (
+                        <PegSlot key={j} colorId={null} />
+                      ))}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ) : null}
+              ))
+            ) : (
+              <>
+                {(me.history ?? []).map((entry) => (
+                  <GuessRow key={entry.round} entry={entry} />
+                ))}
+
+                {!alreadySubmitted ? (
+                  <div
+                    className="guess-row guess-row--current"
+                    style={{ '--peg-count': state.currentGuess.length } as React.CSSProperties}
+                  >
+                    <div className="guess-row__main">
+                      <span className="guess-row__round" aria-label={`Round ${room.round}`}>
+                        {room.round}
+                      </span>
+                      <div className="guess-row__pegs">
+                        {state.currentGuess.map((color, i) => (
+                          <PegSlot
+                            key={i}
+                            colorId={color}
+                            onClick={() => handlePegClick(i)}
+                            glow={hintMode || hintedPegIndex === i}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
+              </>
+            )}
           </div>
 
           <DecoderSidebar players={room.players} viewerId={room.viewerId} />
 
-          <div className="feedback-legend">
-            <span>
-              <span className="feedback-dot feedback-dot--exact" /> correct color &amp; position
-            </span>
-            <span>
-              <span className="feedback-dot feedback-dot--color" /> correct color, wrong position
-            </span>
-            <span>
-              <span className="feedback-dot" /> no match
-            </span>
-          </div>
+          {showLegend ? (
+            <div className="feedback-legend">
+              <span>
+                <span className="feedback-dot feedback-dot--exact" /> correct color &amp; position
+              </span>
+              <span>
+                <span className="feedback-dot feedback-dot--color" /> correct color, wrong position
+              </span>
+              <span>
+                <span className="feedback-dot" /> no match
+              </span>
+            </div>
+          ) : null}
 
-          <div className="screen-actions">
-            <button
-              type="button"
-              className="btn btn--primary"
-              disabled={!canSubmit || alreadySubmitted}
-              onClick={() => actions.submitGuess()}
-            >
-              {alreadySubmitted ? 'Submitted — waiting…' : 'Submit'}
-            </button>
-          </div>
+          {!isReview ? (
+            <>
+              <div className="screen-actions">
+                <button
+                  type="button"
+                  className="btn btn--primary"
+                  disabled={!canSubmit || alreadySubmitted}
+                  onClick={() => actions.submitGuess()}
+                >
+                  {alreadySubmitted ? 'Waiting…' : 'Submit'}
+                </button>
+              </div>
 
-          <ColorPalette selectedColor={selectedColor} onSelectColor={handleSelectColor} />
+              <ColorPalette selectedColor={selectedColor} onSelectColor={handleSelectColor} />
+            </>
+          ) : null}
         </>
       )}
+
+      {leaveConfirmOpen ? (
+        <div className="confirm-dialog-backdrop" onClick={() => setShowLeaveConfirm(false)}>
+          <div
+            ref={leaveDialogRef}
+            className="confirm-dialog"
+            role="alertdialog"
+            aria-modal="true"
+            aria-label="Leave the game?"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p>Leave the game? Your progress will be lost.</p>
+            <div className="confirm-dialog__actions">
+              <button type="button" className="btn" onClick={() => setShowLeaveConfirm(false)}>
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn btn--primary"
+                onClick={() => {
+                  restoreLeaveFocusRef.current = false;
+                  actions.leaveRoom();
+                }}
+              >
+                Leave
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }

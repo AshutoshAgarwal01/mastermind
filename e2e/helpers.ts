@@ -9,7 +9,11 @@ export async function fillPegs(page: Page, colors: string[]): Promise<void> {
     if ((await swatch.getAttribute('aria-pressed')) !== 'true') {
       await swatch.click();
     }
-    await page.getByRole('button', { name: 'Empty slot' }).first().click();
+    // Scoped to interactive (clickable) pegs specifically — a prior round that carried over
+    // blank also renders "Empty slot" pegs, just non-interactive ones, which would otherwise be
+    // matched first by a plain page-wide locator. Works on both MainGame (current guess row) and
+    // SetSecretCode (no .guess-row wrapper at all, just interactive peg slots directly).
+    await page.locator('button.peg-slot--interactive[aria-label="Empty slot"]').first().click();
   }
 }
 

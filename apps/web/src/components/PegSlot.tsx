@@ -16,7 +16,7 @@ export function PegSlot({ colorId, onClick, size = 'medium', glow = false }: Peg
   return (
     <button
       type="button"
-      className={`peg-slot peg-slot--${size}${onClick ? ' peg-slot--interactive' : ''}${glow ? ' peg-slot--hint-glow' : ''}`}
+      className={`peg-slot peg-slot--${size}${onClick ? ' peg-slot--interactive' : ''}${glow ? ' peg-slot--hint-glow' : ''}${!color ? ' peg-slot--empty' : ''}`}
       style={{ backgroundColor: color?.hex ?? 'transparent' }}
       onClick={onClick}
       disabled={!onClick}

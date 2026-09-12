@@ -39,6 +39,14 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
   const roomCodeRef = useRef<string | null>(null);
   const prevRoundRef = useRef<number | null>(null);
   const settingCodeInitRef = useRef(false);
+  // Always holds the latest room, for async callbacks (like requestHint's ack below) that need
+  // to check the CURRENT round/status once they resolve, not whatever was in scope when they
+  // started.
+  const roomRef = useRef<RoomStateView | null>(null);
+
+  useEffect(() => {
+    roomRef.current = room;
+  }, [room]);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -224,13 +232,17 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
   const requestHint = useCallback(
     async (pegIndex: number): Promise<PegColorId | null> => {
       const socket = getSocket();
+      const roundAtRequest = roomRef.current?.round;
       return new Promise<PegColorId | null>((resolve) => {
         socket.emit('request_hint', { pegIndex }, (res) => {
-          if (res.ok) {
+          // The round may have moved on while this request was in flight (timeout, or another
+          // Decoder finishing first in multiplayer) — applying a stale reveal would silently
+          // recolor whatever peg now occupies this index in the new round's draft.
+          if (res.ok && roomRef.current?.round === roundAtRequest) {
             setPeg(pegIndex, res.color);
             resolve(res.color);
           } else {
-            setJoinError(res.message);
+            if (!res.ok) setJoinError(res.message);
             resolve(null);
           }
         });

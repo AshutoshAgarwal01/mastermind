@@ -42,13 +42,15 @@ export function MainGame() {
   }, [room?.round]);
 
   // A new round means a fresh draft guess — any hint-mode/glow state from the last round is
-  // stale, and the color selection resets back to the first swatch.
+  // stale, the color selection resets back to the first swatch, and the dev-only round-layout
+  // preview (which replaces the real board entirely) must not survive a real round transition.
   useEffect(() => {
     if (room?.round !== undefined && room.round !== prevHintRoundRef.current) {
       prevHintRoundRef.current = room.round;
       setHintMode(false);
       setHintedPegIndex(null);
       setSelectedColor(PEG_COLORS[0].id);
+      setPreviewAllRounds(false);
     }
   }, [room?.round]);
 

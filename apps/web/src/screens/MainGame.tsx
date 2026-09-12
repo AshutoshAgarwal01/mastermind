@@ -50,7 +50,7 @@ export function MainGame() {
 
     const dialog = leaveDialogRef.current;
     const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    const buttons = Array.from(dialog.querySelectorAll<HTMLButtonElement>('button'));
+    const buttons = Array.from(dialog.querySelectorAll<HTMLButtonElement>('button:not([disabled])'));
     buttons[0]?.focus();
 
     function handleKeyDown(event: KeyboardEvent) {

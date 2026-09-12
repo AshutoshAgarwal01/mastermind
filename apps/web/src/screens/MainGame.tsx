@@ -18,9 +18,11 @@ export function MainGame() {
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const boardRef = useRef<HTMLDivElement>(null);
   const leaveDialogRef = useRef<HTMLDivElement>(null);
+  const restoreLeaveFocusRef = useRef(true);
   const tickTimeRef = useRef(0);
   const prevHintRoundRef = useRef<number | null>(null);
   const [preciseSeconds, setPreciseSeconds] = useState(0);
+  const leaveConfirmOpen = room?.status !== 'ended' && showLeaveConfirm;
 
   useEffect(() => {
     // Scroll the last real row into view rather than to the container's raw scrollHeight —
@@ -44,7 +46,7 @@ export function MainGame() {
   }, [room?.timeLeft]);
 
   useEffect(() => {
-    if (!showLeaveConfirm || !leaveDialogRef.current) return;
+    if (!leaveConfirmOpen || !leaveDialogRef.current) return;
 
     const dialog = leaveDialogRef.current;
     const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
@@ -74,9 +76,9 @@ export function MainGame() {
     document.addEventListener('keydown', handleKeyDown, true);
     return () => {
       document.removeEventListener('keydown', handleKeyDown, true);
-      if (previousFocus?.isConnected) previousFocus.focus();
+      if (restoreLeaveFocusRef.current && previousFocus?.isConnected) previousFocus.focus();
     };
-  }, [showLeaveConfirm]);
+  }, [leaveConfirmOpen]);
 
   useEffect(() => {
     if (!room) return;
@@ -125,6 +127,7 @@ export function MainGame() {
     }
     // window.confirm() is a blocking native dialog that can be unreliable/unresponsive in
     // embedded webviews and PWA contexts — use an in-app confirm instead.
+    restoreLeaveFocusRef.current = true;
     setShowLeaveConfirm(true);
   }
 
@@ -280,7 +283,7 @@ export function MainGame() {
         </>
       )}
 
-      {!isReview && showLeaveConfirm ? (
+      {leaveConfirmOpen ? (
         <div className="confirm-dialog-backdrop" onClick={() => setShowLeaveConfirm(false)}>
           <div
             ref={leaveDialogRef}
@@ -295,7 +298,14 @@ export function MainGame() {
               <button type="button" className="btn" onClick={() => setShowLeaveConfirm(false)}>
                 Cancel
               </button>
-              <button type="button" className="btn btn--primary" onClick={() => actions.leaveRoom()}>
+              <button
+                type="button"
+                className="btn btn--primary"
+                onClick={() => {
+                  restoreLeaveFocusRef.current = false;
+                  actions.leaveRoom();
+                }}
+              >
                 Leave
               </button>
             </div>

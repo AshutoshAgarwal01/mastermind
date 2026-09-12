@@ -36,8 +36,22 @@ test('single-user: solo game auto-assigns a bot Coder and scores a submitted gue
     { timeout: 10_000 },
   );
 
-  await page.getByRole('button', { name: 'Leave Game' }).click();
-  await page.getByRole('button', { name: 'Leave', exact: true }).click();
+  const leaveGameButton = page.getByRole('button', { name: 'Leave Game' });
+  await leaveGameButton.click();
+  const leaveDialog = page.getByRole('alertdialog');
+  const cancelButton = leaveDialog.getByRole('button', { name: 'Cancel' });
+  const confirmLeaveButton = leaveDialog.getByRole('button', { name: 'Leave', exact: true });
+  await expect(cancelButton).toBeFocused();
+  await page.keyboard.press('Shift+Tab');
+  await expect(confirmLeaveButton).toBeFocused();
+  await page.keyboard.press('Tab');
+  await expect(cancelButton).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(leaveDialog).toBeHidden();
+  await expect(leaveGameButton).toBeFocused();
+
+  await leaveGameButton.click();
+  await confirmLeaveButton.click();
   await expect(page.getByRole('heading', { name: 'Mastermind' })).toBeVisible();
 });
 

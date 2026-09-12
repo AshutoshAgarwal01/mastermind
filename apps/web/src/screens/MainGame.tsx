@@ -17,6 +17,8 @@ export function MainGame() {
   const [previewAllRounds, setPreviewAllRounds] = useState(false);
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const boardRef = useRef<HTMLDivElement>(null);
+  const leaveDialogRef = useRef<HTMLDivElement>(null);
+  const restoreLeaveFocusRef = useRef(true);
   const tickTimeRef = useRef(0);
   const prevHintRoundRef = useRef<number | null>(null);
   // Tracks a pending single-tap recolor on a filled peg, so a second tap on the same peg
@@ -26,6 +28,7 @@ export function MainGame() {
     timer: null,
   });
   const [preciseSeconds, setPreciseSeconds] = useState(0);
+  const leaveConfirmOpen = room?.status !== 'ended' && showLeaveConfirm;
 
   useEffect(() => {
     // Scroll the last real row into view rather than to the container's raw scrollHeight —
@@ -55,6 +58,41 @@ export function MainGame() {
       if (pegTapRef.current.timer) clearTimeout(pegTapRef.current.timer);
     };
   }, []);
+
+  useEffect(() => {
+    if (!leaveConfirmOpen || !leaveDialogRef.current) return;
+
+    const dialog = leaveDialogRef.current;
+    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const buttons = Array.from(dialog.querySelectorAll<HTMLButtonElement>('button:not([disabled])'));
+    buttons[0]?.focus();
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        setShowLeaveConfirm(false);
+      } else if (event.key === 'Tab' && buttons.length > 0) {
+        const firstButton = buttons[0];
+        const lastButton = buttons[buttons.length - 1];
+        if (!dialog.contains(document.activeElement)) {
+          event.preventDefault();
+          (event.shiftKey ? lastButton : firstButton).focus();
+        } else if (event.shiftKey && document.activeElement === firstButton) {
+          event.preventDefault();
+          lastButton.focus();
+        } else if (!event.shiftKey && document.activeElement === lastButton) {
+          event.preventDefault();
+          firstButton.focus();
+        }
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown, true);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown, true);
+      if (restoreLeaveFocusRef.current && previousFocus?.isConnected) previousFocus.focus();
+    };
+  }, [leaveConfirmOpen]);
 
   useEffect(() => {
     if (!room) return;
@@ -126,6 +164,7 @@ export function MainGame() {
     }
     // window.confirm() is a blocking native dialog that can be unreliable/unresponsive in
     // embedded webviews and PWA contexts — use an in-app confirm instead.
+    restoreLeaveFocusRef.current = true;
     setShowLeaveConfirm(true);
   }
 
@@ -287,9 +326,10 @@ export function MainGame() {
         </>
       )}
 
-      {!isReview && showLeaveConfirm ? (
+      {leaveConfirmOpen ? (
         <div className="confirm-dialog-backdrop" onClick={() => setShowLeaveConfirm(false)}>
           <div
+            ref={leaveDialogRef}
             className="confirm-dialog"
             role="alertdialog"
             aria-modal="true"
@@ -301,7 +341,14 @@ export function MainGame() {
               <button type="button" className="btn" onClick={() => setShowLeaveConfirm(false)}>
                 Cancel
               </button>
-              <button type="button" className="btn btn--primary" onClick={() => actions.leaveRoom()}>
+              <button
+                type="button"
+                className="btn btn--primary"
+                onClick={() => {
+                  restoreLeaveFocusRef.current = false;
+                  actions.leaveRoom();
+                }}
+              >
                 Leave
               </button>
             </div>

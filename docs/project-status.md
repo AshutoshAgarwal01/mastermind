@@ -340,3 +340,6 @@ Per-workspace equivalents also work, e.g. `npm run dev --workspace apps/server`,
 6. Permanent usage analytics (games played/completed, returning users) via a durable ledger
    decoupled from Application Insights' retention window — design captured in
    [analytics.md](./analytics.md), not yet implemented.
+7. Ship to Android + iOS app stores via Capacitor (wraps the existing `apps/web` build, no UI
+   rewrite) — decision, native-feature plan, graphics ceiling, and required infrastructure
+   captured in [mobile-platform.md](./mobile-platform.md), not yet implemented.

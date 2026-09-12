@@ -166,6 +166,17 @@ export function MainGame() {
     timers.set(index, timer);
   }
 
+  function handleSubmit() {
+    // Don't wait for the server room_update/alreadySubmitted flip to cancel pending timers —
+    // if the request takes longer than the 300ms window, a stale timer could still fire after
+    // the old guess was already recorded, mutating currentGuess (and, for a locked peg, the
+    // value the next round's carry-over reads) out from under the just-submitted guess.
+    const timers = pegTapTimersRef.current;
+    timers.forEach((timer) => clearTimeout(timer));
+    timers.clear();
+    actions.submitGuess();
+  }
+
   function handleLeave() {
     if (isReview) {
       actions.exitGameReview();
@@ -323,7 +334,7 @@ export function MainGame() {
                   type="button"
                   className="btn btn--primary"
                   disabled={!canSubmit || alreadySubmitted}
-                  onClick={() => actions.submitGuess()}
+                  onClick={handleSubmit}
                 >
                   {alreadySubmitted ? 'Waiting…' : 'Submit'}
                 </button>

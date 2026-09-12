@@ -51,7 +51,7 @@ test('single-user: solo game auto-assigns a bot Coder and scores a submitted gue
   await expect(leaveGameButton).toBeFocused();
 
   await leaveGameButton.click();
-  await page.getByRole('button', { name: 'Leave', exact: true }).click();
+  await confirmLeaveButton.click();
   await expect(page.getByRole('heading', { name: 'Mastermind' })).toBeVisible();
 });
 

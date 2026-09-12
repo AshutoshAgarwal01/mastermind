@@ -58,7 +58,10 @@ export function MainGame() {
       } else if (event.key === 'Tab' && buttons.length > 0) {
         const firstButton = buttons[0];
         const lastButton = buttons[buttons.length - 1];
-        if (event.shiftKey && document.activeElement === firstButton) {
+        if (!dialog.contains(document.activeElement)) {
+          event.preventDefault();
+          (event.shiftKey ? lastButton : firstButton).focus();
+        } else if (event.shiftKey && document.activeElement === firstButton) {
           event.preventDefault();
           lastButton.focus();
         } else if (!event.shiftKey && document.activeElement === lastButton) {
@@ -68,9 +71,9 @@ export function MainGame() {
       }
     }
 
-    dialog.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('keydown', handleKeyDown, true);
     return () => {
-      dialog.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('keydown', handleKeyDown, true);
       previousFocus?.focus();
     };
   }, [showLeaveConfirm]);

@@ -19,6 +19,12 @@ export function MainGame() {
   const boardRef = useRef<HTMLDivElement>(null);
   const tickTimeRef = useRef(0);
   const prevHintRoundRef = useRef<number | null>(null);
+  // Tracks a pending single-tap recolor on a filled peg, so a second tap on the same peg
+  // within the window can cancel it and toggle the lock instead (see handlePegClick).
+  const pegTapRef = useRef<{ index: number | null; timer: ReturnType<typeof setTimeout> | null }>({
+    index: null,
+    timer: null,
+  });
   const [preciseSeconds, setPreciseSeconds] = useState(0);
 
   useEffect(() => {
@@ -41,6 +47,14 @@ export function MainGame() {
   useEffect(() => {
     tickTimeRef.current = Date.now();
   }, [room?.timeLeft]);
+
+  // Cancel any pending single-tap-recolor timer on unmount so it never fires after the
+  // component (or the whole game) is gone.
+  useEffect(() => {
+    return () => {
+      if (pegTapRef.current.timer) clearTimeout(pegTapRef.current.timer);
+    };
+  }, []);
 
   useEffect(() => {
     if (!room) return;
@@ -79,7 +93,30 @@ export function MainGame() {
       });
       return;
     }
-    actions.setPeg(index, selectedColor);
+
+    // Locking only applies to already-filled pegs, and only via a double-tap — a plain single
+    // tap on an empty slot should recolor it immediately, no disambiguation needed.
+    if (state.currentGuess[index] === null) {
+      actions.setPeg(index, selectedColor);
+      return;
+    }
+
+    const pending = pegTapRef.current;
+    if (pending.index === index && pending.timer) {
+      // Second tap within the window on the same peg — treat as a double-tap: cancel the
+      // pending recolor from the first tap and toggle the lock instead.
+      clearTimeout(pending.timer);
+      pegTapRef.current = { index: null, timer: null };
+      actions.toggleLockedPeg(index);
+      return;
+    }
+
+    if (pending.timer) clearTimeout(pending.timer);
+    const timer = setTimeout(() => {
+      actions.setPeg(index, selectedColor);
+      pegTapRef.current = { index: null, timer: null };
+    }, 300);
+    pegTapRef.current = { index, timer };
   }
 
   function handleLeave() {
@@ -179,8 +216,12 @@ export function MainGame() {
               ))
             ) : (
               <>
-                {(me.history ?? []).map((entry) => (
-                  <GuessRow key={entry.round} entry={entry} />
+                {(me.history ?? []).map((entry, i, history) => (
+                  <GuessRow
+                    key={entry.round}
+                    entry={entry}
+                    lockedPegs={isReview && i === history.length - 1 ? state.lockedPegs : undefined}
+                  />
                 ))}
 
                 {!alreadySubmitted ? (
@@ -199,6 +240,7 @@ export function MainGame() {
                             colorId={color}
                             onClick={() => handlePegClick(i)}
                             glow={hintMode || hintedPegIndex === i}
+                            locked={!!state.lockedPegs[i]}
                           />
                         ))}
                       </div>
@@ -222,6 +264,7 @@ export function MainGame() {
               <span>
                 <span className="feedback-dot" /> no match
               </span>
+              <span>🔒 Double tap to lock/unlock</span>
             </div>
           ) : null}
 

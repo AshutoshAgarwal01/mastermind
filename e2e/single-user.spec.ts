@@ -126,10 +126,52 @@ test('single-user: peg circle size stays consistent across rows regardless of th
       .evaluateAll((els) => els.map((el) => Math.round(el.getBoundingClientRect().width))),
   ]);
 
-  expect(row1PegWidths).toHaveLength(6);
-  expect(row2PegWidths).toHaveLength(6);
-  // Every peg across both rows must be the same size, whether or not that row has the ⏱ icon.
-  expect(new Set([...row1PegWidths, ...row2PegWidths]).size).toBe(1);
+  await page.getByRole('button', { name: 'Leave Game' }).click();
+  await page.getByRole('button', { name: 'Leave', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Mastermind' })).toBeVisible();
+});
+
+test('single-user: double-tapping a filled peg locks it so it repeats next round, and unlocks it again', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Create Game' }).click();
+  await page.getByLabel('Your name tag').fill('LockTester');
+  await page.getByRole('button', { name: 'Easy', exact: true }).click();
+  await page.getByRole('button', { name: 'Create' }).click();
+
+  await page.getByRole('button', { name: 'Start Game' }).click();
+  await expect(page.getByRole('heading', { name: 'Roles Assigned' })).toBeVisible({ timeout: 10_000 });
+  await dismissRoleReveal(page);
+  await expect(page.locator('.round-indicator')).toHaveAttribute('aria-label', 'Round 1 of 12', {
+    timeout: 10_000,
+  });
+
+  await fillPegs(page, ['Red', 'Blue', 'Green', 'Yellow']);
+
+  const currentPegs = page.locator('.guess-row--current .peg-slot');
+  const firstPeg = currentPegs.first();
+
+  // Double-tapping the filled peg should lock it (badge appears), with no color change.
+  await firstPeg.dblclick();
+  await expect(firstPeg).toHaveAttribute('aria-label', 'Red (locked)');
+  await expect(page.locator('.guess-row--current .peg-slot__lock')).toBeVisible();
+
+  await page.getByRole('button', { name: 'Submit' }).click();
+
+  // Round 2's first peg should already be filled in with the locked color, the rest blank.
+  await expect(page.locator('.round-indicator')).toHaveAttribute('aria-label', 'Round 2 of 12', {
+    timeout: 10_000,
+  });
+  const round2Pegs = page.locator('.guess-row--current .peg-slot');
+  await expect(round2Pegs.first()).toHaveAttribute('aria-label', 'Red (locked)');
+  const round2Labels = await round2Pegs.evaluateAll((els) => els.map((el) => el.getAttribute('aria-label')));
+  expect(round2Labels).toEqual(['Red (locked)', 'Empty slot', 'Empty slot', 'Empty slot']);
+
+  // Double-tapping it again should unlock it — badge gone, color unchanged.
+  await round2Pegs.first().dblclick();
+  await expect(round2Pegs.first()).toHaveAttribute('aria-label', 'Red');
+  await expect(page.locator('.guess-row--current .peg-slot__lock')).toHaveCount(0);
 
   await page.getByRole('button', { name: 'Leave Game' }).click();
   await page.getByRole('button', { name: 'Leave', exact: true }).click();

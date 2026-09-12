@@ -59,6 +59,9 @@ flowchart TD
 - **Light / Dark mode** toggle.
 - **Color-blind accessibility** toggle (enables shape/symbol overlays on
   pegs).
+- **Peg style** picker — Classic / Minimal / Glossy / Bold (default Bold),
+  with a live preview row of all peg colors so the effect is visible
+  immediately, without needing to be mid-game to see it.
 
 ### 3.6 Lobby (Waiting Room)
 - List of joined players (name tags) with a joined/ready indicator.
@@ -130,6 +133,15 @@ it's recorded as a timeout for that round.
   color doesn't require re-selecting it each time — exactly one color is
   always selected. Tap **Submit** once every slot is filled to lock in the
   guess for the round.
+- **Locking a peg**: double-tapping an already-filled peg in the current
+  round's row locks it — a small 🔒 icon appears overlapping its corner, and
+  that position keeps repeating the same color automatically every following
+  round, so players don't have to keep re-picking pegs they're confident
+  about. A plain single tap still recolors a filled peg as normal (there's a
+  brief window to tell the two gestures apart). Double-tapping a locked peg
+  again unlocks it. Locking is a personal convenience only — it doesn't
+  affect scoring or what other players see, and resets at the start of every
+  new game.
 - **Sidebar/strip** (no tabs): lists all other players' name tags with only
   their **latest round's feedback summary** (correct-position / correct-color
   counts) — never their actual guessed colors.
@@ -142,23 +154,34 @@ it's recorded as a timeout for that round.
 
 ## 5. Game End Screen
 
-- Reveals the **secret code**.
+- Reveals the **secret code**, in a compact icon pill (🔑, no text label) instead of a
+  full-width labeled row.
 - **Result banner**: a large icon + short message reflecting the *viewer's own* outcome — 🥇
   "You won!" for a winner (a cracker, or the Coder when nobody cracks it); otherwise one of
   😅/👏/🌟 for a loser, chosen by how close their final guess was (near-miss, rough round, or a
   solid middle-ground effort, respectively) — never a discouraging icon.
 - The heading itself gets a matching icon too: a random 🎉/🎊 prefix on "Code Cracked!", or a 🔐
-  prefix on "Out of rounds".
-- **Final guess reveal**: each Decoder's **last submitted guess** is shown
-  alongside its feedback (same row style as the guess board — pegs, feedback
-  dots, carried-over icon), so players can see how close the final attempt
-  was. In multiplayer, this is shown **for every Decoder**, not just the
-  viewer's own guess.
-- **Leaderboard/ranking** of everyone who cracked the code, ordered by
-  earliest submission timestamp (1st, 2nd, 3rd, ...), each marked with 🥇; if
-  no one cracked it, shows the loss outcome with the Coder called out (🥇) as
-  winner.
-- Actions: **Play Again** (back to Lobby, same room) or **Return to Home**.
+  prefix on "Out of rounds". If the Coder wins because nobody cracked it and the Coder is a bot,
+  a 🤖 badge appears next to its name in that sentence.
+- **Merged results/leaderboard**: winners and every Decoder's **last submitted guess** are shown
+  together in one list (instead of two separate sections repeating the same names) — each row
+  is a medal (🥇🥈🥉🏅 for winners, blank for non-winners) next to the player's name on one line,
+  then that guess's pegs + feedback dots (same row style as the guess board — carried-over icon
+  included) on the line below, in multiplayer shown **for every Decoder**, not just the viewer's
+  own guess.
+- Actions: **Play Again** (host only, back to Lobby, same room), **Review Game** (see §5.1
+  below), or **Return to Home** — all three as plain text buttons in a single row.
+
+### 5.1 Review Game
+
+Pressing **Review Game** takes the player into a **read-only view of the Main Game screen**,
+showing their own full round-by-round guess history exactly as it played out (secret code not
+included) — the round timer, Submit button, color palette, and hint icon are all hidden, since
+nothing here is editable. The last round's row shows a 🔒 badge on any peg that was still locked
+when the game ended (see §4.1). A ➜ arrow button replaces the ❌ Leave Game icon in the header;
+tapping it returns straight back to the Game End screen (no confirmation needed, since nothing is
+lost by leaving review mode). Starting a new game (Play Again) or leaving the room exits review
+mode automatically.
 
 ## 6. Responsive Behavior
 

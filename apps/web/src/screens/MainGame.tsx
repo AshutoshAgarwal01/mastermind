@@ -10,6 +10,12 @@ import { useMultiplayer } from '../state/useMultiplayer';
 export function MainGame() {
   const { state, actions } = useMultiplayer();
   const room = state.room;
+  const me = room?.players.find((p) => p.id === room.viewerId);
+  // Derived up here (before the hooks below) so the peg-tap-timer cleanup effect can depend on
+  // it directly — this flips true the instant THIS player's own guess is recorded, even in a
+  // multiplayer round where other Decoders are still playing and room.round/status haven't
+  // changed yet.
+  const alreadySubmitted = !!(me?.history?.length && me.history[me.history.length - 1].round === room?.round);
   const [selectedColor, setSelectedColor] = useState<PegColorId>(PEG_COLORS[0].id);
   const [hintMode, setHintMode] = useState(false);
   const [hintedPegIndex, setHintedPegIndex] = useState<number | null>(null);
@@ -50,16 +56,19 @@ export function MainGame() {
     tickTimeRef.current = Date.now();
   }, [room?.timeLeft]);
 
-  // Cancel any pending single-tap-recolor timers whenever the round/status changes (MainGame
-  // stays mounted across rounds, so a timer started just before submit/timeout would otherwise
-  // survive into the next round and unexpectedly recolor its fresh draft) or on unmount.
+  // Cancel any pending single-tap-recolor timers whenever the round/status changes, or as soon
+  // as THIS player's own submission is accepted (MainGame stays mounted across rounds, and in a
+  // multiplayer round with several Decoders, this player's submit can leave room.round/status
+  // unchanged while others are still playing — without reacting to alreadySubmitted too, a
+  // pending timer could still fire post-submit and recolor an already-submitted, possibly
+  // locked, peg) or on unmount.
   useEffect(() => {
     const timers = pegTapTimersRef.current;
     return () => {
       timers.forEach((timer) => clearTimeout(timer));
       timers.clear();
     };
-  }, [room?.round, room?.status]);
+  }, [room?.round, room?.status, alreadySubmitted]);
 
   useEffect(() => {
     if (!leaveConfirmOpen || !leaveDialogRef.current) return;
@@ -107,7 +116,6 @@ export function MainGame() {
   }, [room]);
 
   if (!room) return null;
-  const me = room.players.find((p) => p.id === room.viewerId);
   if (!me) return null;
 
   // Reached via the GameEnd screen's "Review Game" button once the room is 'ended' — read-only,
@@ -116,7 +124,6 @@ export function MainGame() {
   const isCoder = me.role === 'coder';
   const canSubmit =
     state.currentGuess.length === room.settings.pegCount && state.currentGuess.every((slot) => slot !== null);
-  const alreadySubmitted = me.history?.[me.history.length - 1]?.round === room.round;
   const hintUsedByMe = !!me.hintUsed;
   const showHintIcon = !isReview && !isCoder && (hintUsedByMe || !alreadySubmitted);
   const hintClickable = !isCoder && !hintUsedByMe && !alreadySubmitted;

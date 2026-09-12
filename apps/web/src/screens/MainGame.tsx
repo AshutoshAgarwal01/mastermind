@@ -17,6 +17,7 @@ export function MainGame() {
   const [previewAllRounds, setPreviewAllRounds] = useState(false);
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const boardRef = useRef<HTMLDivElement>(null);
+  const leaveDialogRef = useRef<HTMLDivElement>(null);
   const tickTimeRef = useRef(0);
   const prevHintRoundRef = useRef<number | null>(null);
   const [preciseSeconds, setPreciseSeconds] = useState(0);
@@ -41,6 +42,38 @@ export function MainGame() {
   useEffect(() => {
     tickTimeRef.current = Date.now();
   }, [room?.timeLeft]);
+
+  useEffect(() => {
+    if (!showLeaveConfirm || !leaveDialogRef.current) return;
+
+    const dialog = leaveDialogRef.current;
+    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const buttons = Array.from(dialog.querySelectorAll<HTMLButtonElement>('button'));
+    buttons[0]?.focus();
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        setShowLeaveConfirm(false);
+      } else if (event.key === 'Tab' && buttons.length > 0) {
+        const firstButton = buttons[0];
+        const lastButton = buttons[buttons.length - 1];
+        if (event.shiftKey && document.activeElement === firstButton) {
+          event.preventDefault();
+          lastButton.focus();
+        } else if (!event.shiftKey && document.activeElement === lastButton) {
+          event.preventDefault();
+          firstButton.focus();
+        }
+      }
+    }
+
+    dialog.addEventListener('keydown', handleKeyDown);
+    return () => {
+      dialog.removeEventListener('keydown', handleKeyDown);
+      previousFocus?.focus();
+    };
+  }, [showLeaveConfirm]);
 
   useEffect(() => {
     if (!room) return;
@@ -247,6 +280,7 @@ export function MainGame() {
       {!isReview && showLeaveConfirm ? (
         <div className="confirm-dialog-backdrop" onClick={() => setShowLeaveConfirm(false)}>
           <div
+            ref={leaveDialogRef}
             className="confirm-dialog"
             role="alertdialog"
             aria-modal="true"

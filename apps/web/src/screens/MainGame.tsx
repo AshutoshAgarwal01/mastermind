@@ -10,6 +10,12 @@ import { useMultiplayer } from '../state/useMultiplayer';
 export function MainGame() {
   const { state, actions } = useMultiplayer();
   const room = state.room;
+  const me = room?.players.find((p) => p.id === room.viewerId);
+  // Derived up here (before the hooks below) so the peg-tap-timer cleanup effect can depend on
+  // it directly — this flips true the instant THIS player's own guess is recorded, even in a
+  // multiplayer round where other Decoders are still playing and room.round/status haven't
+  // changed yet.
+  const alreadySubmitted = !!(me?.history?.length && me.history[me.history.length - 1].round === room?.round);
   const [selectedColor, setSelectedColor] = useState<PegColorId>(PEG_COLORS[0].id);
   const [hintMode, setHintMode] = useState(false);
   const [hintedPegIndex, setHintedPegIndex] = useState<number | null>(null);
@@ -21,6 +27,11 @@ export function MainGame() {
   const restoreLeaveFocusRef = useRef(true);
   const tickTimeRef = useRef(0);
   const prevHintRoundRef = useRef<number | null>(null);
+  // Tracks pending single-tap recolors on filled pegs, keyed by peg index, so a second tap on
+  // THAT SAME peg within the window can cancel it and toggle the lock instead (see
+  // handlePegClick). Per-index (not a single shared ref) so rapid taps on two DIFFERENT filled
+  // pegs each get their own independent timer instead of the second tap cancelling the first's.
+  const pegTapTimersRef = useRef<Map<number, ReturnType<typeof setTimeout>>>(new Map());
   const [preciseSeconds, setPreciseSeconds] = useState(0);
   const leaveConfirmOpen = room?.status !== 'ended' && showLeaveConfirm;
 
@@ -31,19 +42,35 @@ export function MainGame() {
   }, [room?.round]);
 
   // A new round means a fresh draft guess — any hint-mode/glow state from the last round is
-  // stale, and the color selection resets back to the first swatch.
+  // stale, the color selection resets back to the first swatch, and the dev-only round-layout
+  // preview (which replaces the real board entirely) must not survive a real round transition.
   useEffect(() => {
     if (room?.round !== undefined && room.round !== prevHintRoundRef.current) {
       prevHintRoundRef.current = room.round;
       setHintMode(false);
       setHintedPegIndex(null);
       setSelectedColor(PEG_COLORS[0].id);
+      setPreviewAllRounds(false);
     }
   }, [room?.round]);
 
   useEffect(() => {
     tickTimeRef.current = Date.now();
   }, [room?.timeLeft]);
+
+  // Cancel any pending single-tap-recolor timers whenever the round/status changes, or as soon
+  // as THIS player's own submission is accepted (MainGame stays mounted across rounds, and in a
+  // multiplayer round with several Decoders, this player's submit can leave room.round/status
+  // unchanged while others are still playing — without reacting to alreadySubmitted too, a
+  // pending timer could still fire post-submit and recolor an already-submitted, possibly
+  // locked, peg) or on unmount.
+  useEffect(() => {
+    const timers = pegTapTimersRef.current;
+    return () => {
+      timers.forEach((timer) => clearTimeout(timer));
+      timers.clear();
+    };
+  }, [room?.round, room?.status, alreadySubmitted]);
 
   useEffect(() => {
     if (!leaveConfirmOpen || !leaveDialogRef.current) return;
@@ -91,7 +118,6 @@ export function MainGame() {
   }, [room]);
 
   if (!room) return null;
-  const me = room.players.find((p) => p.id === room.viewerId);
   if (!me) return null;
 
   // Reached via the GameEnd screen's "Review Game" button once the room is 'ended' — read-only,
@@ -100,7 +126,6 @@ export function MainGame() {
   const isCoder = me.role === 'coder';
   const canSubmit =
     state.currentGuess.length === room.settings.pegCount && state.currentGuess.every((slot) => slot !== null);
-  const alreadySubmitted = me.history?.[me.history.length - 1]?.round === room.round;
   const hintUsedByMe = !!me.hintUsed;
   const showHintIcon = !isReview && !isCoder && (hintUsedByMe || !alreadySubmitted);
   const hintClickable = !isCoder && !hintUsedByMe && !alreadySubmitted;
@@ -117,7 +142,41 @@ export function MainGame() {
       });
       return;
     }
-    actions.setPeg(index, selectedColor);
+
+    // Locking only applies to already-filled pegs, and only via a double-tap — a plain single
+    // tap on an empty slot should recolor it immediately, no disambiguation needed.
+    if (state.currentGuess[index] === null) {
+      actions.setPeg(index, selectedColor);
+      return;
+    }
+
+    const timers = pegTapTimersRef.current;
+    const pendingTimer = timers.get(index);
+    if (pendingTimer) {
+      // Second tap within the window on THIS peg — treat as a double-tap: cancel the pending
+      // recolor from the first tap and toggle the lock instead.
+      clearTimeout(pendingTimer);
+      timers.delete(index);
+      actions.toggleLockedPeg(index);
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      actions.setPeg(index, selectedColor);
+      timers.delete(index);
+    }, 300);
+    timers.set(index, timer);
+  }
+
+  function handleSubmit() {
+    // Don't wait for the server room_update/alreadySubmitted flip to cancel pending timers —
+    // if the request takes longer than the 300ms window, a stale timer could still fire after
+    // the old guess was already recorded, mutating currentGuess (and, for a locked peg, the
+    // value the next round's carry-over reads) out from under the just-submitted guess.
+    const timers = pegTapTimersRef.current;
+    timers.forEach((timer) => clearTimeout(timer));
+    timers.clear();
+    actions.submitGuess();
   }
 
   function handleLeave() {
@@ -218,8 +277,12 @@ export function MainGame() {
               ))
             ) : (
               <>
-                {(me.history ?? []).map((entry) => (
-                  <GuessRow key={entry.round} entry={entry} />
+                {(me.history ?? []).map((entry, i, history) => (
+                  <GuessRow
+                    key={entry.round}
+                    entry={entry}
+                    lockedPegs={isReview && i === history.length - 1 ? state.lockedPegs : undefined}
+                  />
                 ))}
 
                 {!alreadySubmitted ? (
@@ -238,6 +301,7 @@ export function MainGame() {
                             colorId={color}
                             onClick={() => handlePegClick(i)}
                             glow={hintMode || hintedPegIndex === i}
+                            locked={!!state.lockedPegs[i]}
                           />
                         ))}
                       </div>
@@ -261,6 +325,7 @@ export function MainGame() {
               <span>
                 <span className="feedback-dot" /> no match
               </span>
+              <span>🔒 Double tap to lock/unlock</span>
             </div>
           ) : null}
 
@@ -271,7 +336,7 @@ export function MainGame() {
                   type="button"
                   className="btn btn--primary"
                   disabled={!canSubmit || alreadySubmitted}
-                  onClick={() => actions.submitGuess()}
+                  onClick={handleSubmit}
                 >
                   {alreadySubmitted ? 'Waiting…' : 'Submit'}
                 </button>

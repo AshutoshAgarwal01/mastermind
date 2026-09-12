@@ -3,9 +3,10 @@ import { PegSlot } from './PegSlot';
 
 interface GuessRowProps {
   entry: RoundEntry;
+  lockedPegs?: boolean[];
 }
 
-export function GuessRow({ entry }: GuessRowProps) {
+export function GuessRow({ entry, lockedPegs }: GuessRowProps) {
   const pegCount = entry.guess.length;
   const empty = pegCount - entry.exact - entry.colorOnly;
   const carriedLabel = entry.carriedOver
@@ -20,7 +21,7 @@ export function GuessRow({ entry }: GuessRowProps) {
         <span className="guess-row__round" aria-label={`Round ${entry.round}`}>{entry.round}</span>
         <div className="guess-row__pegs">
           {entry.guess.map((color, i) => (
-            <PegSlot key={i} colorId={color} />
+            <PegSlot key={i} colorId={color} locked={!!lockedPegs?.[i]} />
           ))}
         </div>
       </div>

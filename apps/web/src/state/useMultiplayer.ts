@@ -21,6 +21,7 @@ export interface MultiplayerState {
   room: RoomStateView | null;
   joinError: string | null;
   currentGuess: (PegColorId | null)[];
+  lockedPegs: boolean[];
   roleVoteChoice: Role | null;
   showRoleReveal: boolean;
   showGameReview: boolean;
@@ -40,6 +41,7 @@ export interface MultiplayerActions {
   voteRole: (role: Role) => void;
   setPeg: (index: number, color: PegColorId) => void;
   clearGuess: () => void;
+  toggleLockedPeg: (index: number) => void;
   submitGuess: () => Promise<void>;
   requestHint: (pegIndex: number) => Promise<PegColorId | null>;
   submitSecretCode: () => Promise<void>;

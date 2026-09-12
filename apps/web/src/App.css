@@ -790,9 +790,9 @@ legend {
   }
 }
 
-/* Dev-only peg style experiments (see SettingsScreen) — 'classic' is the default look above and
-   needs no override. Empty slots keep the classic dashed-looking border regardless of style so
-   they stay visible as placeholders; only FILLED pegs get the alternate treatment. */
+/* Peg style options (see SettingsScreen) — 'classic' is the default look above and needs no
+   override. Empty slots keep the classic dashed-looking border regardless of style so they
+   stay visible as placeholders; only FILLED pegs get the alternate treatment. */
 [data-peg-style='flat'] .peg-slot:not(.peg-slot--empty) {
   border: none;
 }
@@ -812,6 +812,25 @@ legend {
   box-shadow:
     inset 0 0 0 2px rgba(0, 0, 0, 0.28),
     0 2px 4px rgba(0, 0, 0, 0.35);
+}
+
+.peg-slot-frame {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+}
+
+/* Purely a status indicator — only ever rendered in the DOM when locked, toggled by
+   double-tapping the peg itself (see MainGame's handlePegClick), so no interactive states.
+   No background chip — just the glyph with a drop-shadow for contrast against any peg color. */
+.peg-slot__lock {
+  position: absolute;
+  right: 2px;
+  bottom: 0;
+  font-size: 16px;
+  line-height: 1;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.6));
+  pointer-events: none;
 }
 
 .waiting-pegs {

@@ -30,6 +30,7 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
   const [room, setRoom] = useState<RoomStateView | null>(null);
   const [joinError, setJoinError] = useState<string | null>(null);
   const [currentGuess, setCurrentGuess] = useState<(PegColorId | null)[]>([]);
+  const [lockedPegs, setLockedPegs] = useState<boolean[]>([]);
   const [roleVoteChoice, setRoleVoteChoice] = useState<Role | null>(null);
   const [showRoleReveal, setShowRoleReveal] = useState(false);
   const [showGameReview, setShowGameReview] = useState(false);
@@ -38,6 +39,14 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
   const roomCodeRef = useRef<string | null>(null);
   const prevRoundRef = useRef<number | null>(null);
   const settingCodeInitRef = useRef(false);
+  // Always holds the latest room, for async callbacks (like requestHint's ack below) that need
+  // to check the CURRENT round/status once they resolve, not whatever was in scope when they
+  // started.
+  const roomRef = useRef<RoomStateView | null>(null);
+
+  useEffect(() => {
+    roomRef.current = room;
+  }, [room]);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -66,6 +75,10 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
         // drop back to the normal flow once the room moves on from 'ended'.
         if (prevStatus === 'ended' && next.status !== 'ended') {
           setShowGameReview(false);
+          // A fresh game must not retain the previous game's draft or lock state.
+          setLockedPegs([]);
+          setCurrentGuess([]);
+          prevRoundRef.current = null
         }
         return next;
       });
@@ -84,13 +97,16 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  // Clear the in-progress draft guess whenever a new round begins.
+  // Clear the in-progress draft guess whenever a new round begins, except for any pegs the
+  // player has locked — those repeat their previous color so guesses don't have to be retyped.
   useEffect(() => {
     if (room?.status === 'playing' && room.round !== prevRoundRef.current) {
       prevRoundRef.current = room.round;
-      setCurrentGuess(new Array(room.settings.pegCount).fill(null));
+      setCurrentGuess((prev) =>
+        Array.from({ length: room.settings.pegCount }, (_, i) => (lockedPegs[i] ? (prev[i] ?? null) : null)),
+      );
     }
-  }, [room?.status, room?.round, room?.settings.pegCount]);
+  }, [room?.status, room?.round, room?.settings.pegCount, lockedPegs]);
 
   // Mirror the in-progress draft to the server so a round that times out with every slot
   // already filled in can be auto-submitted instead of treated as a timeout.
@@ -194,6 +210,14 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
     setCurrentGuess((prev) => new Array(prev.length).fill(null));
   }, []);
 
+  const toggleLockedPeg = useCallback((index: number) => {
+    setLockedPegs((prev) => {
+      const next = [...prev];
+      next[index] = !next[index];
+      return next;
+    });
+  }, []);
+
   const submitGuess = useCallback(async () => {
     if (currentGuess.some((c) => c === null)) return;
     const socket = getSocket();
@@ -208,13 +232,17 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
   const requestHint = useCallback(
     async (pegIndex: number): Promise<PegColorId | null> => {
       const socket = getSocket();
+      const roundAtRequest = roomRef.current?.round;
       return new Promise<PegColorId | null>((resolve) => {
         socket.emit('request_hint', { pegIndex }, (res) => {
-          if (res.ok) {
+          // The round may have moved on while this request was in flight (timeout, or another
+          // Decoder finishing first in multiplayer) — applying a stale reveal would silently
+          // recolor whatever peg now occupies this index in the new round's draft.
+          if (res.ok && roomRef.current?.round === roundAtRequest) {
             setPeg(pegIndex, res.color);
             resolve(res.color);
           } else {
-            setJoinError(res.message);
+            if (!res.ok) setJoinError(res.message);
             resolve(null);
           }
         });
@@ -267,6 +295,7 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
     // Clear any unsubmitted draft guess — otherwise it silently reappears (stale, filled-in)
     // the next time this player reaches the 'playing' status in any room.
     setCurrentGuess([]);
+    setLockedPegs([]);
     prevRoundRef.current = null;
   }, []);
 
@@ -297,6 +326,7 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
     room,
     joinError,
     currentGuess,
+    lockedPegs,
     roleVoteChoice,
     showRoleReveal,
     showGameReview,
@@ -316,6 +346,7 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
     voteRole,
     setPeg,
     clearGuess,
+    toggleLockedPeg,
     submitGuess,
     requestHint,
     submitSecretCode,

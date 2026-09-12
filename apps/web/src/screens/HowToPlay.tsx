@@ -152,6 +152,11 @@ export function HowToPlay() {
           color.
         </li>
         <li>
+          <span aria-hidden="true">🔒</span> Happy with a peg? Double-tap it to lock it in — a
+          small lock icon appears, and that color repeats automatically in every future round so
+          you don't have to keep re-picking it. Double-tap it again to unlock.
+        </li>
+        <li>
           <span aria-hidden="true">🔌</span> Lost connection? Your seat is held — reconnect anytime
           with the same room code and name tag to pick up right where you left off.
         </li>

@@ -51,14 +51,20 @@ apps/
                             shows difficulty as plain label pills with an ⓘ icon linking to
                             HowToPlay for the round-seconds/max-rounds definitions, and peg count
                             as pill buttons with a big number + small "PEGS" caption instead of
-                            "N pegs" radio text)
+                            "N pegs" radio text). SettingsScreen also has a **Peg style** picker
+                            (Classic / Minimal / Glossy / Bold radio options, default Bold) with a
+                            live 6-color preview row, persisted to localStorage
+                            (`mastermind:pegstyle`) and mirrored onto `document.documentElement`
+                            as `data-peg-style` — CSS keyed off that attribute reskins both
+                            `.peg-slot` and `.color-swatch` consistently everywhere pegs appear.
         HowToPlay           Enriched with a 6-step numbered "How a game works" list (emoji icon +
                             title/body card per step, reuses .how-to-step styles), a peg-color
                             swatch row (PegSlot small size per DIFFICULTIES/PEG_COLORS entry) for
                             "Picking peg colors", a live example-guess mockup (4 colored PegSlots +
                             feedback dots matching a real 2-exact/1-color-only/1-miss result,
                             reusing GuessRow's .feedback-dot/.guess-row__* CSS) with a legend, and
-                            a "Good to know" tips list (timeout carry-over, reconnection, colorblind
+                            a "Good to know" tips list (timeout carry-over, peg locking, reconnection,
+                            colorblind
                             mode). No screenshots — the VS Code embedded browser can't reliably
                             emulate a phone viewport (see §4 environment note), so illustration
                             relies on colored circles/icons instead.
@@ -74,10 +80,32 @@ apps/
         MainGame            Branches Decoder view (own board + other-Decoders feedback sidebar,
                             one-hint-per-game 💡 bulb icon in the header) vs. Coder view (grid of
                             every Decoder's board, spectator-only, with a blinking round badge on
-                            any Decoder still mid-round)
-        GameEnd             Secret code, ranked winners list (🥇), every Decoder's final
-                            guess+feedback, and a large per-viewer result icon/message (🥇 win, or
-                            one of 😅/👏/🌟 depending on how close the loss was)
+                            any Decoder still mid-round). Decoders can **double-tap any filled peg
+                            in the current round to lock it** (a 🔒 badge appears on its corner) so
+                            that color repeats automatically every following round instead of
+                            needing to be re-picked — double-tap again to unlock. Locking is a
+                            purely client-side convenience (`lockedPegs` boolean array in
+                            `MultiplayerContext`, never sent to the server) that resets on every
+                            new game. This same component is reused, in a read-only **review
+                            mode**, when a finished game's "Review Game" button is pressed (see
+                            GameEnd below) — `room.status === 'ended'` hides the timer, hints,
+                            Submit button, and color palette, and swaps the ❌ Leave icon for a
+                            ➜ "Back to Results" arrow that returns to GameEnd without leaving the
+                            room.
+        GameEnd             Secret code shown in a compact icon pill (🔑, no text label). Winners
+                            and every Decoder's final guess are merged into ONE leaderboard
+                            (avoids repeating names twice): each row is a rank medal (🥇🥈🥉🏅,
+                            inline before the name) + name on one line, then that player's final
+                            guess + feedback on the line below, column-aligned via matching CSS
+                            grids so the round-number badge lines up under the section's 🎯 icon
+                            and the peg row lines up under the name. A large per-viewer result
+                            icon/message sits above the pills: 🥇 "You won!" for a winner, or one
+                            of 😅/👏/🌟 for a loser depending on how close their final guess was; a
+                            🤖 badge appears next to a bot Coder's name in the "nobody cracked it"
+                            sentence. Actions row: **Play Again**
+                            (host only) / **Review Game** (navigates into MainGame's read-only
+                            review mode, see above) / **Return to Home**, all plain text buttons
+                            in one row (not icon-only — tried and reverted per feedback).
 root package.json          npm workspaces ("apps/*", "packages/*")
 ```
 
@@ -129,6 +157,26 @@ root package.json          npm workspaces ("apps/*", "packages/*")
   (`getLossResult()` in `GameEnd.tsx`). The "Code Cracked!" heading gets a random 🎉/🎊 prefix;
   the "Out of rounds" heading gets a 🔐 prefix. Winners (and the Coder, when nobody cracks it) are
   marked with 🥇 in the results list/summary line.
+- **Peg locking:** in `MainGame.tsx`, double-tapping an already-filled peg in the current round
+  toggles a lock on it (🔒 badge, no background chip, drop-shadow only, overlapping the peg's own
+  corner) — a locked peg's color repeats automatically in every subsequent round until unlocked
+  (same gesture) or a new game starts. A single tap on a filled peg still recolors it normally; a
+  short (~300ms) tap-disambiguation window in `handlePegClick` distinguishes a genuine single tap
+  from the first half of a double-tap so recoloring and locking never fight each other. Purely
+  client-side (`lockedPegs` state in `MultiplayerContext`, `toggleLockedPeg` action) — the server
+  has no concept of locks. When reviewing a finished game, the LAST historical round shows the
+  lock badge for whatever was still locked when the game ended (earlier rounds show none, since
+  there's no historical record of past lock state).
+- **Peg style:** a Settings option (Classic / Minimal / Glossy / Bold, default **Bold**) that
+  reskins every `.peg-slot` and `.color-swatch` via a `data-peg-style` attribute on `<html>` —
+  Classic keeps the original gray-bordered circle; Minimal drops the border; Glossy adds a subtle
+  radial-gradient highlight; Bold adds a self-shading inset ring + drop shadow (approximates a
+  "tone-matched border" without needing each peg's actual hex value in CSS). Persisted to
+  `localStorage` like theme/colorblind.
+- **Review Game:** from GameEnd, decoders can navigate into a read-only version of `MainGame`
+  (`showGameReview` client state, `reviewGame()`/`exitGameReview()` actions) to see their full
+  round-by-round board again — no timer, hints, Submit, or color palette, with a ➜ "Back to
+  Results" button replacing ❌ Leave. Resets automatically the moment a new game starts.
 - Icons: still mostly emoji characters (⚙/✕/💡/🥇/etc.), not `lucide-react` — still not added.
 
 **Planned but NOT yet implemented:** Zod runtime validation of socket payloads (currently only
@@ -216,17 +264,22 @@ auto-advance also covers the transition into the new `setting-code` phase.
 
 ### 3.1 End-to-end tests (Playwright)
 
-Two reusable Playwright specs live in `e2e/` at the repo root, added after manually validating
-both flows live in the browser:
+Two Playwright spec files live in `e2e/` at the repo root (5 tests total), added/extended after
+manually validating each flow live in the browser:
 
-- `e2e/single-user.spec.ts` — solo game: Create Game -> Lobby (solo note) -> Start Game ->
-  auto-assigned bot Coder -> submits a guess in round 1 -> asserts a real exact/color-only score
-  appears -> Leave Game back to Home.
-- `e2e/multi-user.spec.ts` — two humans in separate browser contexts (Alice host + Bob guest):
+- `e2e/single-user.spec.ts` (4 tests) — solo game: Create Game -> Lobby (solo note) -> Start Game
+  -> auto-assigned bot Coder -> submits a guess in round 1 -> asserts a real exact/color-only
+  score appears -> Leave Game back to Home; leaving mid-round (unsubmitted draft) clears that
+  draft for the next game instead of leaking it in filled-in; peg circle size stays visually
+  consistent across historical rows regardless of the ⏱ timeout icon (6-peg Impossible game, a
+  real 20s timeout); double-tapping a filled peg locks it (color repeats next round, other slots
+  reset) and double-tapping again unlocks it.
+- `e2e/multi-user.spec.ts` (1 test) — two humans in separate browser contexts (Alice host + Bob guest):
   create/join by room code -> real 15s role vote (Alice votes Coder, Bob votes Decoder) -> Alice
   sets the secret code via `SetSecretCode` -> Bob submits the exact code -> asserts a perfect
   "4 correct position, 0 correct color" score and the shared "Code Cracked!" Game End screen on
-  both pages -> asserts only the host sees "Play Again".
+  both pages -> asserts only the host sees "Play Again" and the merged leaderboard shows Bob's
+  rank-1 medal.
 - `e2e/helpers.ts` — shared helpers: `fillPegs` (taps a color in the always-visible color drawer,
   then an empty peg slot, per color), `getRoomCode` (reads the Lobby's room code),
   `dismissRoleReveal` (clicks Continue on RoleReveal, tolerating the 3s auto-advance already
@@ -287,3 +340,6 @@ Per-workspace equivalents also work, e.g. `npm run dev --workspace apps/server`,
 6. Permanent usage analytics (games played/completed, returning users) via a durable ledger
    decoupled from Application Insights' retention window — design captured in
    [analytics.md](./analytics.md), not yet implemented.
+7. Ship to Android + iOS app stores via Capacitor (wraps the existing `apps/web` build, no UI
+   rewrite) — decision, native-feature plan, graphics ceiling, and required infrastructure
+   captured in [mobile-platform.md](./mobile-platform.md), not yet implemented.

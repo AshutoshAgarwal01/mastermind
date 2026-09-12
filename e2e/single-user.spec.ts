@@ -142,8 +142,137 @@ test('single-user: peg circle size stays consistent across rows regardless of th
 
   expect(row1PegWidths).toHaveLength(6);
   expect(row2PegWidths).toHaveLength(6);
-  // Every peg across both rows must be the same size, whether or not that row has the ⏱ icon.
   expect(new Set([...row1PegWidths, ...row2PegWidths]).size).toBe(1);
+
+  await page.getByRole('button', { name: 'Leave Game' }).click();
+  await page.getByRole('button', { name: 'Leave', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Mastermind' })).toBeVisible();
+});
+
+test('single-user: double-tapping a filled peg locks it so it repeats next round, and unlocks it again', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Create Game' }).click();
+  await page.getByLabel('Your name tag').fill('LockTester');
+  await page.getByRole('button', { name: 'Easy', exact: true }).click();
+  await page.getByRole('button', { name: 'Create' }).click();
+
+  await page.getByRole('button', { name: 'Start Game' }).click();
+  await expect(page.getByRole('heading', { name: 'Roles Assigned' })).toBeVisible({ timeout: 10_000 });
+  await dismissRoleReveal(page);
+  await expect(page.locator('.round-indicator')).toHaveAttribute('aria-label', 'Round 1 of 12', {
+    timeout: 10_000,
+  });
+
+  await fillPegs(page, ['Red', 'Blue', 'Green', 'Yellow']);
+
+  const currentPegs = page.locator('.guess-row--current .peg-slot');
+  const firstPeg = currentPegs.first();
+
+  // Double-tapping the filled peg should lock it (badge appears), with no color change.
+  await firstPeg.dblclick();
+  await expect(firstPeg).toHaveAttribute('aria-label', 'Red (locked)');
+  await expect(page.locator('.guess-row--current .peg-slot__lock')).toBeVisible();
+
+  await page.getByRole('button', { name: 'Submit' }).click();
+
+  // Round 2's first peg should already be filled in with the locked color, the rest blank.
+  await expect(page.locator('.round-indicator')).toHaveAttribute('aria-label', 'Round 2 of 12', {
+    timeout: 10_000,
+  });
+  const round2Pegs = page.locator('.guess-row--current .peg-slot');
+  await expect(round2Pegs.first()).toHaveAttribute('aria-label', 'Red (locked)');
+  const round2Labels = await round2Pegs.evaluateAll((els) => els.map((el) => el.getAttribute('aria-label')));
+  expect(round2Labels).toEqual(['Red (locked)', 'Empty slot', 'Empty slot', 'Empty slot']);
+
+  // Double-tapping it again should unlock it — badge gone, color unchanged.
+  await round2Pegs.first().dblclick();
+  await expect(round2Pegs.first()).toHaveAttribute('aria-label', 'Red');
+  await expect(page.locator('.guess-row--current .peg-slot__lock')).toHaveCount(0);
+
+  await page.getByRole('button', { name: 'Leave Game' }).click();
+  await page.getByRole('button', { name: 'Leave', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Mastermind' })).toBeVisible();
+});
+
+test('single-user: rapidly recoloring two different filled pegs recolors both, not just the second', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Create Game' }).click();
+  await page.getByLabel('Your name tag').fill('RapidTapTester');
+  await page.getByRole('button', { name: 'Easy', exact: true }).click();
+  await page.getByRole('button', { name: 'Create' }).click();
+
+  await page.getByRole('button', { name: 'Start Game' }).click();
+  await expect(page.getByRole('heading', { name: 'Roles Assigned' })).toBeVisible({ timeout: 10_000 });
+  await dismissRoleReveal(page);
+  await expect(page.locator('.round-indicator')).toHaveAttribute('aria-label', 'Round 1 of 12', {
+    timeout: 10_000,
+  });
+
+  await fillPegs(page, ['Red', 'Blue', 'Green', 'Yellow']);
+
+  const currentPegs = page.locator('.guess-row--current .peg-slot');
+  const palette = page.locator('.color-palette');
+
+  // Recolor peg 0 and peg 1 back-to-back, with no delay in between — each already-filled peg's
+  // single-tap recolor is debounced (to disambiguate from a double-tap lock), and a bug once
+  // let a second tap on a DIFFERENT peg cancel the first peg's still-pending recolor entirely.
+  await palette.getByRole('button', { name: 'Purple' }).click();
+  await currentPegs.nth(0).click();
+  await palette.getByRole('button', { name: 'Orange' }).click();
+  await currentPegs.nth(1).click();
+
+  // Both recolors should land — peg 0 must not be left stuck on its old color.
+  await expect(currentPegs.nth(0)).toHaveAttribute('aria-label', 'Purple', { timeout: 2_000 });
+  await expect(currentPegs.nth(1)).toHaveAttribute('aria-label', 'Orange', { timeout: 2_000 });
+
+  await page.getByRole('button', { name: 'Leave Game' }).click();
+  await page.getByRole('button', { name: 'Leave', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Mastermind' })).toBeVisible();
+});
+
+test('single-user: a pending peg recolor from just before submit does not leak into the next round', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Create Game' }).click();
+  await page.getByLabel('Your name tag').fill('LeakTester');
+  await page.getByRole('button', { name: 'Easy', exact: true }).click();
+  await page.getByRole('button', { name: 'Create' }).click();
+
+  await page.getByRole('button', { name: 'Start Game' }).click();
+  await expect(page.getByRole('heading', { name: 'Roles Assigned' })).toBeVisible({ timeout: 10_000 });
+  await dismissRoleReveal(page);
+  await expect(page.locator('.round-indicator')).toHaveAttribute('aria-label', 'Round 1 of 12', {
+    timeout: 10_000,
+  });
+
+  await fillPegs(page, ['Red', 'Blue', 'Green', 'Yellow']);
+
+  const currentPegs = page.locator('.guess-row--current .peg-slot');
+  const palette = page.locator('.color-palette');
+
+  // Single-tap (not double-tap) an already-filled peg to start its 300ms recolor-disambiguation
+  // timer, then immediately submit — well within that window — to end the round. MainGame stays
+  // mounted across the round transition, so a bug once let that stale timer fire ~300ms later
+  // and silently recolor a peg in the NEW round that was never touched.
+  await palette.getByRole('button', { name: 'Purple' }).click();
+  await currentPegs.nth(0).click();
+  await page.getByRole('button', { name: 'Submit' }).click();
+
+  await expect(page.locator('.round-indicator')).toHaveAttribute('aria-label', 'Round 2 of 12', {
+    timeout: 10_000,
+  });
+
+  // Wait past the original 300ms window (relative to the single-tap above) — round 2's board
+  // must remain completely blank, not have peg 0 unexpectedly filled in.
+  await page.waitForTimeout(500);
+  const round2Pegs = page.locator('.guess-row--current .peg-slot');
+  const round2Labels = await round2Pegs.evaluateAll((els) => els.map((el) => el.getAttribute('aria-label')));
+  expect(round2Labels).toEqual(['Empty slot', 'Empty slot', 'Empty slot', 'Empty slot']);
 
   await page.getByRole('button', { name: 'Leave Game' }).click();
   await page.getByRole('button', { name: 'Leave', exact: true }).click();

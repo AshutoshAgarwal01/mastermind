@@ -21,12 +21,11 @@ export function MainGame() {
   const restoreLeaveFocusRef = useRef(true);
   const tickTimeRef = useRef(0);
   const prevHintRoundRef = useRef<number | null>(null);
-  // Tracks a pending single-tap recolor on a filled peg, so a second tap on the same peg
-  // within the window can cancel it and toggle the lock instead (see handlePegClick).
-  const pegTapRef = useRef<{ index: number | null; timer: ReturnType<typeof setTimeout> | null }>({
-    index: null,
-    timer: null,
-  });
+  // Tracks pending single-tap recolors on filled pegs, keyed by peg index, so a second tap on
+  // THAT SAME peg within the window can cancel it and toggle the lock instead (see
+  // handlePegClick). Per-index (not a single shared ref) so rapid taps on two DIFFERENT filled
+  // pegs each get their own independent timer instead of the second tap cancelling the first's.
+  const pegTapTimersRef = useRef<Map<number, ReturnType<typeof setTimeout>>>(new Map());
   const [preciseSeconds, setPreciseSeconds] = useState(0);
   const leaveConfirmOpen = room?.status !== 'ended' && showLeaveConfirm;
 
@@ -51,13 +50,16 @@ export function MainGame() {
     tickTimeRef.current = Date.now();
   }, [room?.timeLeft]);
 
-  // Cancel any pending single-tap-recolor timer on unmount so it never fires after the
-  // component (or the whole game) is gone.
+  // Cancel any pending single-tap-recolor timers whenever the round/status changes (MainGame
+  // stays mounted across rounds, so a timer started just before submit/timeout would otherwise
+  // survive into the next round and unexpectedly recolor its fresh draft) or on unmount.
   useEffect(() => {
+    const timers = pegTapTimersRef.current;
     return () => {
-      if (pegTapRef.current.timer) clearTimeout(pegTapRef.current.timer);
+      timers.forEach((timer) => clearTimeout(timer));
+      timers.clear();
     };
-  }, []);
+  }, [room?.round, room?.status]);
 
   useEffect(() => {
     if (!leaveConfirmOpen || !leaveDialogRef.current) return;
@@ -139,22 +141,22 @@ export function MainGame() {
       return;
     }
 
-    const pending = pegTapRef.current;
-    if (pending.index === index && pending.timer) {
-      // Second tap within the window on the same peg — treat as a double-tap: cancel the
-      // pending recolor from the first tap and toggle the lock instead.
-      clearTimeout(pending.timer);
-      pegTapRef.current = { index: null, timer: null };
+    const timers = pegTapTimersRef.current;
+    const pendingTimer = timers.get(index);
+    if (pendingTimer) {
+      // Second tap within the window on THIS peg — treat as a double-tap: cancel the pending
+      // recolor from the first tap and toggle the lock instead.
+      clearTimeout(pendingTimer);
+      timers.delete(index);
       actions.toggleLockedPeg(index);
       return;
     }
 
-    if (pending.timer) clearTimeout(pending.timer);
     const timer = setTimeout(() => {
       actions.setPeg(index, selectedColor);
-      pegTapRef.current = { index: null, timer: null };
+      timers.delete(index);
     }, 300);
-    pegTapRef.current = { index, timer };
+    timers.set(index, timer);
   }
 
   function handleLeave() {

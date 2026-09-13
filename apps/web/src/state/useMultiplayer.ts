@@ -7,7 +7,7 @@ import type {
   RoomStateView,
 } from '@mastermind/shared';
 
-export type UiScreen = 'home' | 'create' | 'join' | 'how-to' | 'settings';
+export type UiScreen = 'home' | 'create' | 'create-solo' | 'join' | 'how-to' | 'settings';
 export type Theme = 'light' | 'dark';
 // User-selectable peg visual treatment (see SettingsScreen); 'bordered' ("Bold") is the default.
 export type PegStyle = 'classic' | 'flat' | 'glossy' | 'bordered';
@@ -34,7 +34,7 @@ export interface MultiplayerActions {
   toggleColorBlind: () => void;
   setPegStyle: (style: PegStyle) => void;
   setPlayerName: (name: string) => void;
-  createRoom: (name: string, difficulty: Difficulty, pegCount: PegCount) => Promise<void>;
+  createRoom: (name: string, difficulty: Difficulty, pegCount: PegCount, solo?: boolean) => Promise<void>;
   joinRoom: (roomCode: string, name: string) => Promise<void>;
   startGame: () => Promise<void>;
   kickPlayer: (playerId: string) => Promise<void>;

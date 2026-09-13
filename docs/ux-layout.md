@@ -17,45 +17,56 @@
   color is never the only way to distinguish pegs. This applies everywhere a
   peg is shown — guess boards, palettes, and feedback pegs.
 - Light/dark mode and color-blind mode are both toggleable from **Settings**
-  (see §3.5).
+  (see §3.6).
 
 ## 3. Screen Flow
 
 ```mermaid
 flowchart TD
-    Home[Home: Create / Join / How to Play] --> Create[Create Game]
+    Home[Home: Play Solo / Host Game / Join / How to Play] --> Solo[Solo Setup]
+    Home --> Create[Host Game]
     Home --> Join[Join Game]
     Home --> HowTo[How to Play]
     Home --> Settings[Settings]
+    Solo --> MainGame[Main Game - rounds]
     Create --> Lobby[Lobby / Waiting Room]
     Join --> Lobby
     Lobby --> RoleSelect[Role Select - 15s vote]
-    RoleSelect --> MainGame[Main Game - rounds]
+    RoleSelect --> MainGame
     MainGame --> GameEnd[Game End / Rankings]
     GameEnd --> Lobby
     GameEnd --> Home
 ```
 
 ### 3.1 Home
-- Three primary actions: **Create Game**, **Join Game**, **How to Play**.
+- Four primary actions: **Play Solo**, **Host Game**, **Join Game**, **How to Play**.
 - A **Settings** entry point (gear icon), always accessible.
+- Solo and multiplayer are distinguished from the very first tap, so a solo game never shows a
+  Lobby/waiting-room screen or a role-vote/role-reveal step for a decision that's already fully
+  determined (bot is always Coder, the lone human is always Decoder).
 
-### 3.2 Create Game (Host)
-- Host picks **difficulty** (Easy / Moderate / Impossible) and **peg count**
+### 3.2 Play Solo
+- A lightweight setup screen: name tag, **difficulty**, and **peg count** — the same controls as
+  Host Game, just without a room code to show or anyone to wait for.
+- Confirming creates the room **and starts the round immediately**, in one step — no Lobby, no
+  role vote, no role-reveal screen to dismiss.
+
+### 3.3 Host Game
+- For multiplayer: host picks **difficulty** (Easy / Moderate / Impossible) and **peg count**
   (4 / 5 / 6).
 - On confirm, a room code is generated and shown prominently (large, easy to
-  read/share), then the host is taken into the Lobby.
+  read/share), then the host is taken into the Lobby to wait for others before starting.
 
-### 3.3 Join Game
+### 3.4 Join Game
 - Two inputs: **room code** and **name tag**.
 - Validation feedback inline (invalid code, duplicate name already taken in
   that lobby).
 
-### 3.4 How to Play
+### 3.5 How to Play
 - Static/scrollable explainer of the rules from game-rules.md, in
   player-friendly language (roles, rounds, feedback, winning).
 
-### 3.5 Settings
+### 3.6 Settings
 - **Light / Dark mode** toggle.
 - **Color-blind accessibility** toggle (enables shape/symbol overlays on
   pegs).
@@ -63,18 +74,22 @@ flowchart TD
   with a live preview row of all peg colors so the effect is visible
   immediately, without needing to be mid-game to see it.
 
-### 3.6 Lobby (Waiting Room)
+### 3.7 Lobby (Waiting Room)
+- Only reached via **Host Game** (multiplayer) or **Join Game** — Play Solo skips it entirely.
 - List of joined players (name tags) with a joined/ready indicator.
 - Shows the chosen difficulty and peg count (read-only for non-hosts).
 - Host sees a **"Start Game"** button (disabled until minimum players met);
   host can kick a player from this screen.
 - Room code stays visible here for late joiners until the host starts.
 
-### 3.7 Role Select
+### 3.8 Role Select
 - Each player picks **Coder** or **Decoder**, with a visible **15s countdown**.
 - Not picking defaults to Decoder.
 - Brief result reveal (who's Coder) before transitioning into the Main Game,
   including the random pick/bot-added cases from game-rules.md §3.
+- Skipped entirely whenever the game ends up with exactly one human (Play Solo, or a host who
+  starts via Host Game with nobody else having joined) — with only one human, the outcome is
+  always the same (bot Coder, human Decoder), so there's nothing to vote on or reveal.
 
 ## 4. Main Game Screen
 

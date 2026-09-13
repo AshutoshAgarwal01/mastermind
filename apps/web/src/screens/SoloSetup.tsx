@@ -6,21 +6,21 @@ import { useMultiplayer } from '../state/useMultiplayer';
 const DIFFICULTY_OPTIONS: Difficulty[] = ['easy', 'moderate', 'impossible'];
 const PEG_OPTIONS: PegCount[] = [4, 5, 6];
 
-export function CreateGame() {
+export function SoloSetup() {
   const { state, actions } = useMultiplayer();
   const [name, setName] = useState('');
   const [difficulty, setDifficulty] = useState<Difficulty>('moderate');
   const [pegCount, setPegCount] = useState<PegCount>(4);
 
-  async function handleCreate() {
+  async function handlePlay() {
     if (!name.trim()) return;
-    await actions.createRoom(name.trim(), difficulty, pegCount);
+    await actions.createRoom(name.trim(), difficulty, pegCount, true);
   }
 
   return (
     <section className="screen screen--create">
-      <h1>Host Game</h1>
-      <p>You'll get a room code to share — start whenever your friends have joined.</p>
+      <h1>Play Solo</h1>
+      <p>Just you against a bot Coder — no waiting, the round starts as soon as you're ready.</p>
 
       <label className="field">
         Your name tag
@@ -79,8 +79,8 @@ export function CreateGame() {
         <button type="button" className="btn" onClick={() => actions.goTo('home')}>
           Back
         </button>
-        <button type="button" className="btn btn--primary" disabled={!name.trim() || state.connecting} onClick={handleCreate}>
-          Create
+        <button type="button" className="btn btn--primary" disabled={!name.trim() || state.connecting} onClick={handlePlay}>
+          Play
         </button>
       </div>
     </section>

@@ -13,7 +13,7 @@ test('multi-user: two humans vote roles, Coder sets the code, Decoder cracks it'
 
   try {
     await host.goto('/');
-    await host.getByRole('button', { name: 'Create Game' }).click();
+    await host.getByRole('button', { name: 'Host Game' }).click();
     await host.getByLabel('Your name tag').fill('Alice');
     await host.getByRole('button', { name: 'Easy', exact: true }).click();
     await host.getByRole('button', { name: 'Create' }).click();
@@ -96,7 +96,7 @@ test("multi-user: a Decoder's pending peg recolor does not leak into round 2 whi
 
   try {
     await host.goto('/');
-    await host.getByRole('button', { name: 'Create Game' }).click();
+    await host.getByRole('button', { name: 'Host Game' }).click();
     await host.getByLabel('Your name tag').fill('Alice');
     await host.getByRole('button', { name: 'Easy', exact: true }).click();
     await host.getByRole('button', { name: 'Create' }).click();

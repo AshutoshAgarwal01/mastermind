@@ -3,6 +3,7 @@ import { MultiplayerProvider } from './state/MultiplayerContext'
 import { useMultiplayer } from './state/useMultiplayer'
 import { Home } from './screens/Home'
 import { CreateGame } from './screens/CreateGame'
+import { SoloSetup } from './screens/SoloSetup'
 import { JoinGame } from './screens/JoinGame'
 import { HowToPlay } from './screens/HowToPlay'
 import { SettingsScreen } from './screens/SettingsScreen'
@@ -21,6 +22,8 @@ function Screens() {
     switch (state.screen) {
       case 'create':
         return <CreateGame />
+      case 'create-solo':
+        return <SoloSetup />
       case 'join':
         return <JoinGame />
       case 'how-to':

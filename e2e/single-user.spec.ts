@@ -1,27 +1,17 @@
 import { test, expect } from '@playwright/test';
-import { dismissRoleReveal, fillPegs } from './helpers';
+import { fillPegs } from './helpers';
 
 test('single-user: solo game auto-assigns a bot Coder and scores a submitted guess', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByRole('heading', { name: 'Mastermind' })).toBeVisible();
 
-  await page.getByRole('button', { name: 'Create Game' }).click();
+  await page.getByRole('button', { name: 'Play Solo' }).click();
   await page.getByLabel('Your name tag').fill('SoloTester');
   await page.getByRole('button', { name: 'Easy', exact: true }).click();
-  await page.getByRole('button', { name: 'Create' }).click();
+  await page.getByRole('button', { name: 'Play', exact: true }).click();
 
-  await expect(page.getByRole('heading', { name: 'Lobby' })).toBeVisible();
-  await expect(page.getByText('a bot Coder will automatically take the Coder role')).toBeVisible();
-
-  await page.getByRole('button', { name: 'Start Game' }).click();
-
-  // Solo play skips the role vote entirely (game-rules.md §3).
-  await expect(page.getByRole('heading', { name: 'Roles Assigned' })).toBeVisible({ timeout: 10_000 });
-  await expect(page.getByText('You are the')).toContainText('Decoder');
-  await expect(page.getByText(/\(bot\) is the/)).toContainText('Coder');
-
-  await dismissRoleReveal(page);
-
+  // Play Solo skips Lobby/role-vote/role-reveal entirely — a bot Coder is auto-assigned and
+  // round 1 starts immediately (game-rules.md §3).
   await expect(page.locator('.round-indicator')).toHaveAttribute('aria-label', 'Round 1 of 12', {
     timeout: 10_000,
   });
@@ -59,13 +49,10 @@ test('single-user: leaving mid-round clears the unsubmitted draft guess for the 
   await page.goto('/');
 
   async function createSoloGame(name: string) {
-    await page.getByRole('button', { name: 'Create Game' }).click();
+    await page.getByRole('button', { name: 'Play Solo' }).click();
     await page.getByLabel('Your name tag').fill(name);
     await page.getByRole('button', { name: 'Easy', exact: true }).click();
-    await page.getByRole('button', { name: 'Create' }).click();
-    await page.getByRole('button', { name: 'Start Game' }).click();
-    await expect(page.getByRole('heading', { name: 'Roles Assigned' })).toBeVisible({ timeout: 10_000 });
-    await dismissRoleReveal(page);
+    await page.getByRole('button', { name: 'Play', exact: true }).click();
     await expect(page.locator('.round-indicator')).toHaveAttribute('aria-label', 'Round 1 of 12', {
       timeout: 10_000,
     });
@@ -100,15 +87,11 @@ test('single-user: peg circle size stays consistent across rows regardless of th
   test.setTimeout(60_000);
 
   await page.goto('/');
-  await page.getByRole('button', { name: 'Create Game' }).click();
+  await page.getByRole('button', { name: 'Play Solo' }).click();
   await page.getByLabel('Your name tag').fill('PegSizeTester');
   await page.getByRole('button', { name: 'Impossible', exact: true }).click();
   await page.getByRole('button', { name: '6 pegs' }).click();
-  await page.getByRole('button', { name: 'Create' }).click();
-
-  await page.getByRole('button', { name: 'Start Game' }).click();
-  await expect(page.getByRole('heading', { name: 'Roles Assigned' })).toBeVisible({ timeout: 10_000 });
-  await dismissRoleReveal(page);
+  await page.getByRole('button', { name: 'Play', exact: true }).click();
 
   await expect(page.locator('.round-indicator')).toHaveAttribute('aria-label', 'Round 1 of 8', {
     timeout: 10_000,
@@ -153,14 +136,11 @@ test('single-user: double-tapping a filled peg locks it so it repeats next round
   page,
 }) => {
   await page.goto('/');
-  await page.getByRole('button', { name: 'Create Game' }).click();
+  await page.getByRole('button', { name: 'Play Solo' }).click();
   await page.getByLabel('Your name tag').fill('LockTester');
   await page.getByRole('button', { name: 'Easy', exact: true }).click();
-  await page.getByRole('button', { name: 'Create' }).click();
+  await page.getByRole('button', { name: 'Play', exact: true }).click();
 
-  await page.getByRole('button', { name: 'Start Game' }).click();
-  await expect(page.getByRole('heading', { name: 'Roles Assigned' })).toBeVisible({ timeout: 10_000 });
-  await dismissRoleReveal(page);
   await expect(page.locator('.round-indicator')).toHaveAttribute('aria-label', 'Round 1 of 12', {
     timeout: 10_000,
   });
@@ -200,14 +180,11 @@ test('single-user: rapidly recoloring two different filled pegs recolors both, n
   page,
 }) => {
   await page.goto('/');
-  await page.getByRole('button', { name: 'Create Game' }).click();
+  await page.getByRole('button', { name: 'Play Solo' }).click();
   await page.getByLabel('Your name tag').fill('RapidTapTester');
   await page.getByRole('button', { name: 'Easy', exact: true }).click();
-  await page.getByRole('button', { name: 'Create' }).click();
+  await page.getByRole('button', { name: 'Play', exact: true }).click();
 
-  await page.getByRole('button', { name: 'Start Game' }).click();
-  await expect(page.getByRole('heading', { name: 'Roles Assigned' })).toBeVisible({ timeout: 10_000 });
-  await dismissRoleReveal(page);
   await expect(page.locator('.round-indicator')).toHaveAttribute('aria-label', 'Round 1 of 12', {
     timeout: 10_000,
   });
@@ -238,14 +215,11 @@ test('single-user: a pending peg recolor from just before submit does not leak i
   page,
 }) => {
   await page.goto('/');
-  await page.getByRole('button', { name: 'Create Game' }).click();
+  await page.getByRole('button', { name: 'Play Solo' }).click();
   await page.getByLabel('Your name tag').fill('LeakTester');
   await page.getByRole('button', { name: 'Easy', exact: true }).click();
-  await page.getByRole('button', { name: 'Create' }).click();
+  await page.getByRole('button', { name: 'Play', exact: true }).click();
 
-  await page.getByRole('button', { name: 'Start Game' }).click();
-  await expect(page.getByRole('heading', { name: 'Roles Assigned' })).toBeVisible({ timeout: 10_000 });
-  await dismissRoleReveal(page);
   await expect(page.locator('.round-indicator')).toHaveAttribute('aria-label', 'Round 1 of 12', {
     timeout: 10_000,
   });

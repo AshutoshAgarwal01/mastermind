@@ -47,11 +47,17 @@ apps/
                             sub-second precision) used by both RoleVote (15s vote) and MainGame
                             (round timer) for a consistent look.
       screens/
-        Home, CreateGame, JoinGame, HowToPlay, SettingsScreen — pre-room screens (CreateGame
-                            shows difficulty as plain label pills with an ⓘ icon linking to
-                            HowToPlay for the round-seconds/max-rounds definitions, and peg count
-                            as pill buttons with a big number + small "PEGS" caption instead of
-                            "N pegs" radio text). SettingsScreen also has a **Peg style** picker
+        Home, CreateGame, SoloSetup, JoinGame, HowToPlay, SettingsScreen — pre-room screens. Home
+                            now has 4 primary actions (Play Solo / Host Game / Join Game / How to
+                            Play) instead of 3 — solo and multiplayer are distinguished from the
+                            first tap so a solo game skips Lobby/role-vote/role-reveal entirely.
+                            CreateGame ("Host Game") and SoloSetup share the same difficulty/peg
+                            controls (difficulty as plain label pills with an ⓘ icon linking to
+                            HowToPlay for the round-seconds/max-rounds definitions, peg count as
+                            pill buttons with a big number + small "PEGS" caption) — SoloSetup's
+                            confirm creates the room AND starts it in one server round trip
+                            (`CreateRoomRequest.solo`), so there's no intermediate 'lobby' render.
+                            SettingsScreen also has a **Peg style** picker
                             (Classic / Minimal / Glossy / Bold radio options, default Bold) with a
                             live 6-color preview row, persisted to localStorage
                             (`mastermind:pegstyle`) and mirrored onto `document.documentElement`
@@ -177,6 +183,14 @@ root package.json          npm workspaces ("apps/*", "packages/*")
   (`showGameReview` client state, `reviewGame()`/`exitGameReview()` actions) to see their full
   round-by-round board again — no timer, hints, Submit, or color palette, with a ➜ "Back to
   Results" button replacing ❌ Leave. Resets automatically the moment a new game starts.
+- **Play Solo / Host Game split:** Home has separate entry points for solo vs. multiplayer instead
+  of one ambiguous "Create Game" — **Play Solo** (`SoloSetup.tsx`) creates the room AND starts it
+  in the same `create_room` request (`CreateRoomRequest.solo`), so a solo game goes straight from
+  the setup screen to round 1 with no Lobby, role-vote, or role-reveal screen. **Host Game**
+  (renamed from "Create Game") is unchanged for multiplayer — Lobby, role vote, and role-reveal
+  still apply since they carry real meaning there. Role-reveal is additionally skipped whenever
+  the resulting game has exactly one human (e.g. a Host Game host who starts alone), since the
+  bot-Coder outcome is deterministic either way.
 - Icons: still mostly emoji characters (⚙/✕/💡/🥇/etc.), not `lucide-react` — still not added.
 
 **Planned but NOT yet implemented:** Zod runtime validation of socket payloads (currently only
@@ -189,14 +203,20 @@ full intended design. (Playwright E2E tests now exist — see §3.1.)
 
 **Fully working, real multiplayer over the network (verified with two concurrent browser
 sessions in this session):**
-- Create Game now also collects the host's name tag, then creates a real room via
+- Host Game (was "Create Game") collects the host's name tag, then creates a real room via
   `create_room` — server returns a room code + a session token (stored in `sessionStorage`).
 - Join Game validates the room code + name against the live server (`join_room`), rejects
   duplicate names / full rooms / already-started rooms with the server's real error message.
 - Lobby shows the live player list (host badge, bot badge), updates in real time via
   `room_update` broadcasts as players join/leave, host-only Kick button (emits `kicked` to the
   removed player's own socket).
-- Solo (1 human) auto-skips straight to a bot Coder, matching game-rules.md §3, exactly as before.
+- Solo (1 human) auto-skips straight to a bot Coder, matching game-rules.md §3. Via the **Play
+  Solo** entry point, `create_room`'s `solo` flag also starts the game in the same request (no
+  intermediate 'lobby' status at all), so the client goes directly from the setup screen to
+  round 1 — no Lobby, role-vote, or role-reveal screen. A host who starts alone via **Host Game**
+  still gets this same auto-bot-Coder behavior, just without the instant-start shortcut (they see
+  Lobby and click Start Game themselves) — either way, the role-reveal screen is skipped whenever
+  the resulting game has exactly one human, since the outcome is always deterministic.
 - 2+ humans get a **real 15-second role vote** (`RoleVote` screen, live countdown from
   `room.roleVoteDeadline`): single Coder pick wins outright, multiple Coder picks resolve to a
   random one of them server-side, zero Coder picks add a bot Coder — verified all three branches
@@ -264,22 +284,26 @@ auto-advance also covers the transition into the new `setting-code` phase.
 
 ### 3.1 End-to-end tests (Playwright)
 
-Two Playwright spec files live in `e2e/` at the repo root (5 tests total), added/extended after
+Two Playwright spec files live in `e2e/` at the repo root (8 tests total), added/extended after
 manually validating each flow live in the browser:
 
-- `e2e/single-user.spec.ts` (4 tests) — solo game: Create Game -> Lobby (solo note) -> Start Game
-  -> auto-assigned bot Coder -> submits a guess in round 1 -> asserts a real exact/color-only
-  score appears -> Leave Game back to Home; leaving mid-round (unsubmitted draft) clears that
-  draft for the next game instead of leaking it in filled-in; peg circle size stays visually
-  consistent across historical rows regardless of the ⏱ timeout icon (6-peg Impossible game, a
-  real 20s timeout); double-tapping a filled peg locks it (color repeats next round, other slots
-  reset) and double-tapping again unlocks it.
-- `e2e/multi-user.spec.ts` (1 test) — two humans in separate browser contexts (Alice host + Bob guest):
-  create/join by room code -> real 15s role vote (Alice votes Coder, Bob votes Decoder) -> Alice
-  sets the secret code via `SetSecretCode` -> Bob submits the exact code -> asserts a perfect
-  "4 correct position, 0 correct color" score and the shared "Code Cracked!" Game End screen on
-  both pages -> asserts only the host sees "Play Again" and the merged leaderboard shows Bob's
-  rank-1 medal.
+- `e2e/single-user.spec.ts` (6 tests) — all via the **Play Solo** flow (setup screen -> straight
+  into round 1, no Lobby/role-vote/role-reveal): auto-assigned bot Coder submits a guess in round
+  1 and asserts a real exact/color-only score appears, then Leave Game back to Home; leaving
+  mid-round (unsubmitted draft) clears that draft for the next game instead of leaking it in
+  filled-in; peg circle size stays visually consistent across historical rows regardless of the
+  ⏱ timeout icon (6-peg Impossible game, a real 20s timeout); double-tapping a filled peg locks
+  it (color repeats next round, other slots reset) and double-tapping again unlocks it; rapidly
+  recoloring two different filled pegs recolors both (not just the second); a pending peg recolor
+  from just before Submit doesn't leak into the next round.
+- `e2e/multi-user.spec.ts` (2 tests) — via **Host Game**: two humans in separate browser contexts
+  (Alice host + Bob guest) create/join by room code -> real 15s role vote (Alice votes Coder, Bob
+  votes Decoder) -> Alice sets the secret code via `SetSecretCode` -> Bob submits the exact code
+  -> asserts a perfect "4 correct position, 0 correct color" score and the shared "Code Cracked!"
+  Game End screen on both pages -> asserts only the host sees "Play Again" and the merged
+  leaderboard shows Bob's rank-1 medal. A second 3-human test (Alice host/Coder, Bob + Carol
+  Decoders) verifies a pending peg-recolor timer doesn't leak into round 2 for one Decoder while
+  another Decoder is still mid-round.
 - `e2e/helpers.ts` — shared helpers: `fillPegs` (taps a color in the always-visible color drawer,
   then an empty peg slot, per color), `getRoomCode` (reads the Lobby's room code),
   `dismissRoleReveal` (clicks Continue on RoleReveal, tolerating the 3s auto-advance already

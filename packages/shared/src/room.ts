@@ -36,6 +36,9 @@ export interface CreateRoomRequest {
   name: string;
   difficulty: Difficulty;
   pegCount: PegCount;
+  /** True for the "Play Solo" flow — the server starts the game immediately (bot Coder, no
+   * Lobby/role-vote wait) instead of leaving the room in 'lobby' for the host to start later. */
+  solo?: boolean;
 }
 
 export interface JoinRoomRequest {

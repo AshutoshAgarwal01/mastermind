@@ -78,6 +78,10 @@ io.on('connection', (socket) => {
       const player = room.addPlayer(req.name.trim(), socket.id);
       socketLocation.set(socket.id, { roomCode: room.roomCode, playerId: player.id });
       socket.join(room.roomCode);
+      // Solo: start immediately (bot Coder, straight into round 1) instead of leaving the room
+      // in 'lobby' — the ack below already reflects the started game, so the client never sees
+      // an intermediate Lobby/role-vote/role-reveal screen for a game that's fully deterministic.
+      if (req.solo) room.startGame(player.id);
       const res: JoinRoomResponse = { ok: true, sessionToken: player.sessionToken, room: room.toView(player.id) };
       cb(res);
     } catch (err) {

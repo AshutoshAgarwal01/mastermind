@@ -68,7 +68,9 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
         const enteringActive =
           (prevStatus === 'lobby' || prevStatus === 'role-vote') &&
           (next.status === 'setting-code' || next.status === 'playing');
-        if (enteringActive) {
+        // Skip the reveal when there's only one human — the bot always takes Coder and the
+        // human always takes Decoder, so there's nothing to actually "reveal".
+        if (enteringActive && next.players.filter((p) => !p.isBot).length > 1) {
           setShowRoleReveal(true);
         }
         // A new game starting after review left the previous game's board on screen —
@@ -134,13 +136,13 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
     }
   }, [room?.status, room?.settings.pegCount]);
 
-  const createRoom = useCallback(async (name: string, difficulty: Difficulty, pegCount: PegCount) => {
+  const createRoom = useCallback(async (name: string, difficulty: Difficulty, pegCount: PegCount, solo?: boolean) => {
     setJoinError(null);
     setConnecting(true);
     const socket = getSocket();
     setPlayerNameState(name);
     await new Promise<void>((resolve) => {
-      socket.emit('create_room', { name, difficulty, pegCount }, (res: JoinRoomResponse | ErrorResponse) => {
+      socket.emit('create_room', { name, difficulty, pegCount, solo }, (res: JoinRoomResponse | ErrorResponse) => {
         setConnecting(false);
         if (res.ok) {
           sessionStorage.setItem(SESSION_KEY_PREFIX + res.room.roomCode, res.sessionToken);

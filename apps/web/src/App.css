@@ -15,7 +15,27 @@
 }
 
 .room-code {
-  font-size: 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.room-code__label {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text);
+}
+
+.room-code__value {
+  font-size: 40px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--text-h);
+}
+
+.lobby-meta {
+  color: var(--text);
 }
 
 .player-list {
@@ -207,7 +227,10 @@
 
 .settings-entry {
   align-self: center;
-  margin-top: 12px;
+  margin-top: 8px;
+  padding: 8px 18px;
+  font-size: 14px;
+  color: var(--text);
 }
 
 .btn {

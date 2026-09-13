@@ -48,7 +48,7 @@ export function HowToPlay() {
 
   return (
     <section className="screen screen--how-to">
-      <h1>How to Play</h1>
+      <h1>How to Play ❓</h1>
       <p>
         One player is the <strong>Coder</strong> and sets a secret sequence of colored pegs at the
         start of the game. Everyone else is a <strong>Decoder</strong>, trying to crack that code.
@@ -161,8 +161,8 @@ export function HowToPlay() {
           with the same room code and name tag to pick up right where you left off.
         </li>
         <li>
-          <span aria-hidden="true">🎨</span> Turn on color-blind mode in Settings to add a unique
-          shape symbol to every peg color.
+          <span aria-hidden="true">🎨</span> Turn on color-blind mode in Personalize to add a
+          unique shape symbol to every peg color.
         </li>
       </ul>
 

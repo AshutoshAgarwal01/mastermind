@@ -19,7 +19,7 @@ export function SoloSetup() {
 
   return (
     <section className="screen screen--create">
-      <h1>Play Solo</h1>
+      <h1>Play Solo 👤</h1>
       <p>Just you against a bot Coder — no waiting, the round starts as soon as you're ready.</p>
 
       <label className="field">

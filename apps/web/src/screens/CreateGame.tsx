@@ -19,7 +19,7 @@ export function CreateGame() {
 
   return (
     <section className="screen screen--create">
-      <h1>Host Game</h1>
+      <h1>Host Game 👥</h1>
       <p>You'll get a room code to share — start whenever your friends have joined.</p>
 
       <label className="field">

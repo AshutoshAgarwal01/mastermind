@@ -8,25 +8,20 @@ export function Home() {
       <h1>Mastermind</h1>
       <div className="home-actions">
         <button type="button" className="btn btn--primary" onClick={() => actions.goTo('create-solo')}>
-          Play Solo
+          Play Solo 👤
         </button>
         <button type="button" className="btn" onClick={() => actions.goTo('create')}>
-          Host Game
+          Host Game 👥
         </button>
         <button type="button" className="btn" onClick={() => actions.goTo('join')}>
-          Join Game
+          Join Game 🔗
         </button>
         <button type="button" className="btn" onClick={() => actions.goTo('how-to')}>
-          How to Play
+          How to Play ❓
         </button>
       </div>
-      <button
-        type="button"
-        className="icon-btn settings-entry"
-        aria-label="Settings"
-        onClick={() => actions.goTo('settings')}
-      >
-        ⚙
+      <button type="button" className="btn settings-entry" onClick={() => actions.goTo('settings')}>
+        Personalize 🪄
       </button>
     </section>
   );

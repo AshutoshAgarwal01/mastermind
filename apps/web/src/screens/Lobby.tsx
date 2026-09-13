@@ -9,16 +9,19 @@ export function Lobby() {
   const diff = DIFFICULTIES[room.settings.difficulty];
   const me = room.players.find((p) => p.id === room.viewerId);
   const isHost = me?.id === room.hostId;
+  const soloSoFar = room.players.filter((p) => !p.isBot).length === 1;
 
   return (
     <section className="screen screen--lobby">
-      <h1>Lobby</h1>
-      <p className="room-code">
-        Room code: <strong>{room.roomCode}</strong>
-      </p>
-      <p>
-        Difficulty: <strong>{diff.label}</strong> ({diff.roundSeconds}s / round, {diff.maxRounds} rounds
-        max) &middot; Pegs: <strong>{room.settings.pegCount}</strong>
+      <h1>Lobby 🛎️</h1>
+
+      <div className="room-code">
+        <span className="room-code__label">Room code</span>
+        <span className="room-code__value">{room.roomCode}</span>
+      </div>
+
+      <p className="lobby-meta">
+        {diff.label} · {room.settings.pegCount} pegs
       </p>
 
       <ul className="player-list">
@@ -38,12 +41,7 @@ export function Lobby() {
         ))}
       </ul>
 
-      {room.players.filter((p) => !p.isBot).length === 1 ? (
-        <p className="lobby-note">
-          Only one human player has joined — a bot Coder will automatically take the Coder role, and
-          you'll be the Decoder.
-        </p>
-      ) : null}
+      {soloSoFar ? <p className="lobby-note">🤖 Solo so far — a bot Coder joins automatically.</p> : null}
 
       {state.joinError ? <p className="inline-message">{state.joinError}</p> : null}
 
@@ -56,7 +54,7 @@ export function Lobby() {
             Start Game
           </button>
         ) : (
-          <p>Waiting for the host to start the game…</p>
+          <p>Waiting for host…</p>
         )}
       </div>
     </section>

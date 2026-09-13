@@ -18,7 +18,7 @@ export function JoinGame() {
 
   return (
     <section className="screen screen--join">
-      <h1>Join Game</h1>
+      <h1>Join Game 🔗</h1>
       <label className="field">
         Room code
         <input value={roomCode} onChange={(e) => setRoomCode(e.target.value)} maxLength={5} />

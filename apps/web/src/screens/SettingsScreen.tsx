@@ -15,7 +15,7 @@ export function SettingsScreen() {
 
   return (
     <section className="screen screen--settings">
-      <h1>Settings</h1>
+      <h1>Personalize 🪄</h1>
 
       <label className="option-row">
         <input

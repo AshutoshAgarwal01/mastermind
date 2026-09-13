@@ -19,7 +19,7 @@ export async function fillPegs(page: Page, colors: string[]): Promise<void> {
 
 /** Reads the room code shown on the Lobby screen (e.g. "AB3XZ"). */
 export async function getRoomCode(page: Page): Promise<string> {
-  const text = await page.locator('.room-code strong').innerText();
+  const text = await page.locator('.room-code__value').innerText();
   return text.trim();
 }
 

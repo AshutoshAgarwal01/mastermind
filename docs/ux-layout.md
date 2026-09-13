@@ -16,7 +16,7 @@
   **shape/symbol** (e.g. star, circle, triangle, square, diamond, cross) so
   color is never the only way to distinguish pegs. This applies everywhere a
   peg is shown — guess boards, palettes, and feedback pegs.
-- Light/dark mode and color-blind mode are both toggleable from **Settings**
+- Light/dark mode and color-blind mode are both toggleable from **Personalize**
   (see §3.6).
 
 ## 3. Screen Flow
@@ -27,7 +27,7 @@ flowchart TD
     Home --> Create[Host Game]
     Home --> Join[Join Game]
     Home --> HowTo[How to Play]
-    Home --> Settings[Settings]
+    Home --> Settings[Personalize]
     Solo --> MainGame[Main Game - rounds]
     Create --> Lobby[Lobby / Waiting Room]
     Join --> Lobby
@@ -40,7 +40,8 @@ flowchart TD
 
 ### 3.1 Home
 - Four primary actions: **Play Solo**, **Host Game**, **Join Game**, **How to Play**.
-- A **Settings** entry point (gear icon), always accessible.
+- A **Personalize** entry point (labeled button, no icon-only affordance), positioned below the
+  main actions so it doesn't compete visually with them.
 - Solo and multiplayer are distinguished from the very first tap, so a solo game never shows a
   Lobby/waiting-room screen or a role-vote/role-reveal step for a decision that's already fully
   determined (bot is always Coder, the lone human is always Decoder).
@@ -66,7 +67,7 @@ flowchart TD
 - Static/scrollable explainer of the rules from game-rules.md, in
   player-friendly language (roles, rounds, feedback, winning).
 
-### 3.6 Settings
+### 3.6 Personalize
 - **Light / Dark mode** toggle.
 - **Color-blind accessibility** toggle (enables shape/symbol overlays on
   pegs).
@@ -76,11 +77,15 @@ flowchart TD
 
 ### 3.7 Lobby (Waiting Room)
 - Only reached via **Host Game** (multiplayer) or **Join Game** — Play Solo skips it entirely.
-- List of joined players (name tags) with a joined/ready indicator.
-- Shows the chosen difficulty and peg count (read-only for non-hosts).
+- The **room code** is the focal point — shown large, with a small "ROOM CODE" caption above it,
+  easy to read aloud or screenshot for sharing.
+- Difficulty and peg count are shown as one compact line (e.g. "Easy · 4 pegs") rather than a
+  full sentence, keeping the rules detail (round seconds, max rounds) in How to Play instead.
+- List of joined players (name tags, "(Host)"/"(Bot)" suffixes) with a joined/ready indicator.
 - Host sees a **"Start Game"** button (disabled until minimum players met);
   host can kick a player from this screen.
-- Room code stays visible here for late joiners until the host starts.
+- If only one human has joined so far, a short note explains a bot Coder will join automatically
+  if the host starts as-is.
 
 ### 3.8 Role Select
 - Each player picks **Coder** or **Decoder**, with a visible **15s countdown**.

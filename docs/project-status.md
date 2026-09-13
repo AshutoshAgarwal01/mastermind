@@ -47,9 +47,10 @@ apps/
                             sub-second precision) used by both RoleVote (15s vote) and MainGame
                             (round timer) for a consistent look.
       screens/
-        Home, CreateGame, SoloSetup, JoinGame, HowToPlay, SettingsScreen — pre-room screens. Home
-                            now has 4 primary actions (Play Solo / Host Game / Join Game / How to
-                            Play) instead of 3 — solo and multiplayer are distinguished from the
+        Home, CreateGame, SoloSetup, JoinGame, HowToPlay, SettingsScreen ("Personalize") —
+                            pre-room screens. Home now has 4 primary actions (Play Solo / Host
+                            Game / Join Game / How to Play, each labeled with a trailing emoji)
+                            instead of 3 — solo and multiplayer are distinguished from the
                             first tap so a solo game skips Lobby/role-vote/role-reveal entirely.
                             CreateGame ("Host Game") and SoloSetup share the same difficulty/peg
                             controls (difficulty as plain label pills with an ⓘ icon linking to
@@ -57,7 +58,8 @@ apps/
                             pill buttons with a big number + small "PEGS" caption) — SoloSetup's
                             confirm creates the room AND starts it in one server round trip
                             (`CreateRoomRequest.solo`), so there's no intermediate 'lobby' render.
-                            SettingsScreen also has a **Peg style** picker
+                            SettingsScreen was renamed "Personalize" (H1 + Home's entry button
+                            both read "Personalize 🪄") and also has a **Peg style** picker
                             (Classic / Minimal / Glossy / Bold radio options, default Bold) with a
                             live 6-color preview row, persisted to localStorage
                             (`mastermind:pegstyle`) and mirrored onto `document.documentElement`
@@ -74,7 +76,8 @@ apps/
                             mode). No screenshots — the VS Code embedded browser can't reliably
                             emulate a phone viewport (see §4 environment note), so illustration
                             relies on colored circles/icons instead.
-        Lobby               Real player list, room code, host-only Start Game + Kick
+        Lobby               Real player list, large room-code display (label + big value),
+                            condensed difficulty/pegs line, host-only Start Game + Kick
         RoleVote            NEW — shown when room.status==='role-vote' (2+ humans): TimerBar
                             countdown, Coder/Decoder vote buttons
         RoleReveal          Client-only transitional screen; now auto-advances after 3s since
@@ -173,7 +176,7 @@ root package.json          npm workspaces ("apps/*", "packages/*")
   has no concept of locks. When reviewing a finished game, the LAST historical round shows the
   lock badge for whatever was still locked when the game ended (earlier rounds show none, since
   there's no historical record of past lock state).
-- **Peg style:** a Settings option (Classic / Minimal / Glossy / Bold, default **Bold**) that
+- **Peg style:** a Personalize option (Classic / Minimal / Glossy / Bold, default **Bold**) that
   reskins every `.peg-slot` and `.color-swatch` via a `data-peg-style` attribute on `<html>` —
   Classic keeps the original gray-bordered circle; Minimal drops the border; Glossy adds a subtle
   radial-gradient highlight; Bold adds a self-shading inset ring + drop shadow (approximates a
@@ -191,7 +194,7 @@ root package.json          npm workspaces ("apps/*", "packages/*")
   still apply since they carry real meaning there. Role-reveal is additionally skipped whenever
   the resulting game has exactly one human (e.g. a Host Game host who starts alone), since the
   bot-Coder outcome is deterministic either way.
-- Icons: still mostly emoji characters (⚙/✕/💡/🥇/etc.), not `lucide-react` — still not added.
+- Icons: still mostly emoji characters (👤/👥/🔗/🪄/❌/💡/🥇/etc.), not `lucide-react` — still not added.
 
 **Planned but NOT yet implemented:** Zod runtime validation of socket payloads (currently only
 TypeScript compile-time typing — a malicious/buggy client could send an invalid payload shape),
